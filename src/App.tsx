@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import HeroVideo from "./HeroVideo";
 import {
   ArrowUpRight,
   ArrowRight,
@@ -40,7 +41,6 @@ type Result = {
   limitations: string;
 };
 type Photo = { file: File; url: string };
-const CAR = "/images/car-studio.png";
 
 function Brand() {
   return (
@@ -686,7 +686,8 @@ export default function App() {
         </div>
       </header>
       <main>
-        <section className="hero">
+        <section className="hero hero-cinematic">
+          <HeroVideo />
           <div className="hero-copy">
             <span className="eyebrow">
               <span className="status-dot" /> VEHICLE INSPECTIONS, IN FOCUS
@@ -714,39 +715,6 @@ export default function App() {
             <div className="hero-note">
               <span className="mini-cross">+</span> Real visual evidence. Always
               reviewed by a human.
-            </div>
-          </div>
-          <div className="hero-visual">
-            <img
-              src={CAR}
-              alt="Silver sports sedan in a dark studio"
-              fetchPriority="high"
-            />
-            <div className="visual-top">
-              <span className="mono">CARPRINT / VISUAL INTELLIGENCE</span>
-              <span className="visual-live">
-                <span /> PROTOTYPE
-              </span>
-            </div>
-            <div className="focus-box">
-              <i />
-              <i />
-              <i />
-              <i />
-              <span className="focus-pin" />
-            </div>
-            <div className="detail-callout">
-              <span className="callout-icon">
-                <ScanLine size={22} />
-              </span>
-              <div>
-                <small>A CLOSER LOOK</small>
-                <strong>The details make the difference.</strong>
-              </div>
-            </div>
-            <div className="visual-bottom">
-              <span className="mono">01 / A NEW PERSPECTIVE</span>
-              <span>Illustrative image</span>
             </div>
           </div>
         </section>
