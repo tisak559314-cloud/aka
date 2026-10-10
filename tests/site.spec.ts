@@ -1,120 +1,94 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
 
-test("example goes through server, displays geometry, supports overlay and report download", async ({
-  page,
-}) => {
+test('real comparison, keyboard overlay and English report export', async ({ page }) => {
   const errors: string[] = [];
-  page.on("pageerror", (error) => errors.push(error.message));
-  await page.goto("/");
-  await page
-    .getByRole("link", { name: "Проверить автомобиль", exact: true })
-    .click();
-  await expect(
-    page.getByRole("button", { name: "Сравнить снимки" }),
-  ).toBeDisabled();
-  await page.getByRole("button", { name: "Как фотографировать" }).click();
-  await expect(
-    page.getByText("Одна и та же деталь", { exact: true }),
-  ).toBeVisible();
-  await page.getByRole("button", { name: "Использовать пример" }).click();
-  await expect(page.getByText(/Синтетический пример:/)).toBeVisible();
-  await page.getByRole("button", { name: "Сравнить снимки" }).click();
-  await expect(
-    page.getByRole("heading", { name: "Геометрическое соответствие найдено" }),
-  ).toBeVisible();
-  await expect(page.getByText("REVIEW · проверка экспертом")).toBeVisible();
-  await page.getByRole("button", { name: "Совмещение", exact: true }).click();
-  const slider = page.getByRole("slider", {
-    name: "Положение разделителя сравнения",
-  });
-  await slider.fill("70");
-  await expect(slider).toHaveValue("70");
-  const downloaded = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Скачать отчёт" }).click();
-  expect((await downloaded).suggestedFilename()).toMatch(
-    /^carprint-report-.*\.json$/,
-  );
-  await page.getByRole("button", { name: "Удалить исходный осмотр" }).click();
-  await expect(
-    page.getByRole("button", { name: "Сравнить снимки" }),
-  ).toBeDisabled();
-  await expect(page.locator(".results")).toHaveCount(0);
+  page.on('pageerror', error => errors.push(error.message));
+  await page.goto('/');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+  await page.getByRole('link', { name: 'Compare your photos', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Compare photos', exact: true })).toBeDisabled();
+  await page.getByRole('button', { name: 'Photo tips' }).click();
+  await expect(page.getByText('The same detail', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Try a sample' }).click();
+  await expect(page.getByText(/Synthetic sample:/)).toBeVisible();
+  await page.getByRole('button', { name: 'Compare photos', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Geometric alignment found' })).toBeVisible();
+  await expect(page.getByText('Expert review needed')).toBeVisible();
+  await page.getByRole('button', { name: 'Aligned overlay' }).click();
+  const slider = page.getByRole('slider', { name: 'Comparison divider position' });
+  await slider.fill('70');
+  await slider.press('ArrowRight');
+  await expect(slider).toHaveValue('71');
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Download report' }).click();
+  const report = await download;
+  expect(report.suggestedFilename()).toMatch(/^carprint-report-.*\.json$/);
+  const contents = await readFile((await report.path())!, 'utf8');
+  expect(contents).not.toMatch(/[А-Яа-яЁё]/);
+  expect(JSON.parse(contents)).toMatchObject({ decision: 'REVIEW', geometry: 'MATCHED' });
+  await page.getByRole('button', { name: 'Clear', exact: true }).click();
+  await expect(page.locator('.results')).toHaveCount(0);
+  await expect(page.locator('.file-info')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Compare photos', exact: true })).toBeDisabled();
   expect(errors).toEqual([]);
 });
 
-test("accepts user photo uploads and rejects unsupported files", async ({
-  page,
-}) => {
-  await page.goto("/#workspace");
-  const inputs = page.locator("input[type=file]");
-  await inputs
-    .nth(0)
-    .setInputFiles({
-      name: "invalid.svg",
-      mimeType: "image/svg+xml",
-      buffer: Buffer.from("<svg></svg>"),
-    });
-  await expect(page.getByRole("alert")).toContainText(
-    "Выберите JPG, PNG или WebP",
-  );
-  await inputs.nth(0).setInputFiles("public/images/car-studio.png");
-  await inputs.nth(1).setInputFiles("public/images/car-studio.png");
-  await page.getByRole("button", { name: "Сравнить снимки" }).click();
-  await expect(
-    page.getByRole("heading", { name: "Геометрическое соответствие найдено" }),
-  ).toBeVisible();
-  await expect(page.getByText(/Загружен один и тот же файл/)).toBeVisible();
+test('user uploads, invalid file recovery and removal', async ({ page }) => {
+  await page.goto('/#workspace');
+  const inputs = page.locator('input[type=file]');
+  await inputs.nth(0).setInputFiles({ name: 'invalid.svg', mimeType: 'image/svg+xml', buffer: Buffer.from('<svg></svg>') });
+  await expect(page.getByRole('alert')).toContainText('Choose a JPG, PNG or WebP');
+  await inputs.nth(0).setInputFiles('public/images/car-studio.png');
+  await inputs.nth(1).setInputFiles('public/images/car-studio.png');
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Compare photos', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Geometric alignment found' })).toBeVisible();
+  await expect(page.getByText(/same file was uploaded twice/)).toBeVisible();
+  await page.getByRole('button', { name: 'Remove reference photo' }).click();
+  await expect(page.locator('.results')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Compare photos', exact: true })).toBeDisabled();
 });
 
-test("server errors are recoverable and never show fabricated results", async ({
-  page,
-}) => {
-  await page.goto("/#workspace");
-  await page.getByRole("button", { name: "Использовать пример" }).click();
-  await page.route("**/api/compare", (route) =>
-    route.fulfill({
-      status: 503,
-      contentType: "application/json",
-      body: JSON.stringify({ detail: "Сервис временно недоступен" }),
-    }),
-  );
-  await page.getByRole("button", { name: "Сравнить снимки" }).click();
-  await expect(page.getByRole("alert")).toContainText(
-    "Сервис временно недоступен",
-  );
-  await expect(page.locator(".results")).toHaveCount(0);
-  await expect(
-    page.getByRole("button", { name: "Сравнить снимки" }),
-  ).toBeEnabled();
+test('server errors allow a successful retry without invented evidence', async ({ page }) => {
+  await page.goto('/#workspace');
+  await page.getByRole('button', { name: 'Try a sample' }).click();
+  await expect(page.getByText(/Synthetic sample:/)).toBeVisible();
+  await page.route('**/api/compare', route => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ detail: 'Service temporarily unavailable' }) }));
+  await page.getByRole('button', { name: 'Compare photos', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('Service temporarily unavailable');
+  await expect(page.locator('.results')).toHaveCount(0);
+  await page.unroute('**/api/compare');
+  await page.getByRole('button', { name: 'Compare photos', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Geometric alignment found' })).toBeVisible();
 });
 
-test("mobile navigation, disclosure controls, responsive layout and reduced motion work", async ({
-  page,
-}) => {
+test('static hosting fallback does not masquerade as a valid sample', async ({ page }) => {
+  await page.goto('/#workspace');
+  await page.route('**/api/example/*', route => route.fulfill({ status: 200, contentType: 'text/html', body: '<html>Static fallback</html>' }));
+  await page.getByRole('button', { name: 'Try a sample' }).click();
+  await expect(page.getByRole('alert')).toContainText('The sample could not be loaded');
+  await expect(page.getByRole('button', { name: 'Compare photos', exact: true })).toBeDisabled();
+  await expect(page.locator('.has-photo')).toHaveCount(0);
+});
+
+test('mobile navigation, FAQ, English content and responsive layouts', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto("/");
-  await expect(page.locator(".intro")).toHaveCount(0);
-  await page.getByRole("button", { name: "Открыть меню" }).click();
-  await page
-    .getByRole("navigation")
-    .getByRole("link", { name: "Технология" })
-    .click();
-  await expect(
-    page.getByRole("button", { name: "Открыть меню" }),
-  ).toHaveAttribute("aria-expanded", "false");
-  await page.getByRole("button", { name: "02 Сопоставьте детали" }).click();
-  await expect(page.getByText("Локальные признаки + геометрия")).toBeVisible();
-  await page
-    .getByRole("button", { name: "Что уже работает в прототипе?" })
-    .click();
-  await expect(page.locator("#faq-1")).toBeVisible();
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Open menu' }).click();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('button', { name: 'Open menu' })).toBeFocused();
+  await page.getByRole('button', { name: 'Open menu' }).click();
+  await page.getByRole('navigation').getByRole('link', { name: 'How it works' }).click();
+  await expect(page.getByRole('button', { name: 'Open menu' })).toHaveAttribute('aria-expanded', 'false');
+  await page.getByText('Does it automatically detect damage?', { exact: true }).click();
+  await expect(page.getByText(/Not in this version/)).toBeVisible();
+  expect(await page.locator('body').innerText()).not.toMatch(/[А-Яа-яЁё]/);
   for (const width of [320, 390, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 900 });
-    expect(
-      await page.evaluate(
-        () => document.documentElement.scrollWidth <= window.innerWidth,
-      ),
-    ).toBeTruthy();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
   }
+  await page.getByRole('link', { name: 'Back to top' }).click();
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
 });

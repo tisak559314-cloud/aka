@@ -22,7 +22,7 @@ MAX_BYTES = 8 * 1024 * 1024
 def jpeg(image):
     ok, encoded = cv2.imencode('.jpg', image, [cv2.IMWRITE_JPEG_QUALITY, 85])
     if not ok:
-        raise HTTPException(500, 'Не удалось подготовить изображение.')
+        raise HTTPException(500, 'Could not prepare the image.')
     return encoded.tobytes()
 
 
@@ -32,19 +32,19 @@ def data_url(image):
 
 def decode(data):
     if not data or len(data) > MAX_BYTES:
-        raise HTTPException(413, 'Размер каждого изображения должен быть от 1 байта до 8 МБ.')
+        raise HTTPException(413, 'Each image must be between 1 byte and 8 MB.')
     # Only JPEG, PNG and WebP are supported; SVG and arbitrary files are rejected.
     if not (data.startswith(b'\xff\xd8\xff') or data.startswith(b'\x89PNG\r\n\x1a\n') or (data.startswith(b'RIFF') and data[8:12] == b'WEBP')):
-        raise HTTPException(415, 'Поддерживаются фотографии JPG, PNG и WebP.')
+        raise HTTPException(415, 'Supported image formats are JPG, PNG and WebP.')
     try:
         image = cv2.imdecode(np.frombuffer(data, dtype=np.uint8), cv2.IMREAD_COLOR)
     except cv2.error:
         image = None
     if image is None:
-        raise HTTPException(422, 'Не удалось прочитать изображение. Попробуйте другой файл.')
+        raise HTTPException(422, 'Could not read the image. Please try a different file.')
     h, w = image.shape[:2]
     if min(h, w) < 96:
-        raise HTTPException(422, 'Слишком маленькое изображение: нужно не менее 96 × 96 пикселей.')
+        raise HTTPException(422, 'The image is too small. Use at least 96 × 96 pixels.')
     if max(h, w) > 1200:
         scale = 1200 / max(h, w)
         image = cv2.resize(image, (round(w * scale), round(h * scale)), interpolation=cv2.INTER_AREA)
@@ -93,15 +93,15 @@ def analyze(reference_bytes, current_bytes):
         else:
             transform = None
     reliable = len(inliers) >= 12 and coverage >= 2 and error is not None and error <= 4
-    warnings = ['Совпадение геометрии не подтверждает идентичность автомобиля: серийные детали могут выглядеть одинаково.']
+    warnings = ['Matching geometry does not confirm vehicle identity: mass-produced parts can look alike.']
     if reference_bytes == current_bytes:
-        warnings.append('Загружен один и тот же файл. Это проверка алгоритма, а не независимый повторный осмотр.')
+        warnings.append('The same file was uploaded twice. This tests the algorithm, not an independent follow-up inspection.')
     if any(q['brightness'] < 30 or q['brightness'] > 230 for q in qualities):
-        warnings.append('Один из снимков слишком тёмный или светлый. Переснимите деталь при равномерном освещении.')
+        warnings.append('One photo is too dark or too bright. Retake it under even lighting.')
     if any(q['sharpness'] < 35 for q in qualities):
-        warnings.append('Мало текстуры или резкости. Снимите индивидуальные следы крупнее; порог качества предварительный.')
+        warnings.append('There is limited texture or sharpness. Capture distinctive details more closely; the quality threshold is preliminary.')
     if not reliable:
-        warnings.append('Недостаточно устойчивых совпадений. Снимите одну и ту же деталь с близкого ракурса.')
+        warnings.append('Not enough stable matches. Photograph the same detail from a similar angle.')
     shown = sorted(inliers, key=lambda m: m.distance)[:45]
     visualization = cv2.drawMatches(images[0], kp1, images[1], kp2, shown, None,
         matchColor=(107, 246, 193), singlePointColor=(150, 150, 150),
@@ -111,7 +111,7 @@ def analyze(reference_bytes, current_bytes):
         aligned = cv2.warpPerspective(images[1], transform, (images[0].shape[1], images[0].shape[0]))
     return {
         'decision': 'REVIEW', 'geometry': 'MATCHED' if reliable else 'INSUFFICIENT',
-        'message': 'Геометрическое соответствие найдено' if reliable else 'Недостаточно визуальных доказательств',
+        'message': 'Geometric alignment found' if reliable else 'Not enough visual evidence',
         'keypoints': [len(kp1), len(kp2)], 'candidate_matches': len(good), 'inliers': len(inliers),
         'reprojection_error_px': error, 'coverage_percent': coverage, 'quality': qualities,
         'warnings': warnings, 'algorithm': 'SIFT + ratio test (0.72) + RANSAC (4 px)',
@@ -120,7 +120,7 @@ def analyze(reference_bytes, current_bytes):
         'evidence_image': data_url(visualization), 'reference_image': data_url(images[0]),
         'aligned_image': data_url(aligned) if aligned is not None else None,
         'elapsed_ms': round((time.perf_counter() - started) * 1000),
-        'limitations': 'Не выполняет детекцию повреждений, калиброванную проверку SAME/DIFFERENT или юридическую оценку. Итоговая проверка — специалистом.',
+        'limitations': 'Does not detect damage, provide a calibrated SAME/DIFFERENT classification or offer a legal assessment. Final review must be performed by a specialist.',
     }
 
 
@@ -137,10 +137,10 @@ def compare(reference: UploadFile = File(...), current: UploadFile = File(...)):
 @app.get('/api/example/{view}')
 def example(view: str):
     if view not in ('reference', 'current'):
-        raise HTTPException(404, 'Снимок не найден.')
+        raise HTTPException(404, 'Photo not found.')
     image = cv2.imread(str(ROOT / 'public/images/car-studio.png'))
     if image is None:
-        raise HTTPException(503, 'Демонстрационные изображения недоступны.')
+        raise HTTPException(503, 'Sample images are unavailable.')
     # Synthetic, disclosed pair; never presented as independently captured vehicle data.
     image = image[300:850, 350:1500]
     if view == 'current':

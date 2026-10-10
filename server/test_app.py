@@ -56,8 +56,8 @@ def test_blank_image_requests_better_evidence():
     result = response.json()
     assert result['inliers'] == 0
     assert result['geometry'] == 'INSUFFICIENT'
-    assert any('один и тот же файл' in warning for warning in result['warnings'])
-    assert any('тёмный' in warning for warning in result['warnings'])
+    assert any('same file' in warning for warning in result['warnings'])
+    assert any('too dark' in warning for warning in result['warnings'])
 
 
 def test_non_image_and_corrupt_files_are_rejected():

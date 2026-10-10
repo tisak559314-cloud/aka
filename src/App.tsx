@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import type { ChangeEvent, DragEvent } from "react";
 import {
   ArrowUpRight,
   ArrowRight,
@@ -7,11 +6,9 @@ import {
   Fingerprint,
   ScanLine,
   ShieldCheck,
-  Layers3,
   Camera,
   Check,
   Plus,
-  Minus,
   Menu,
   X,
   Upload,
@@ -22,8 +19,7 @@ import {
   AlertCircle,
   Focus,
   Play,
-  ScanEye,
-  ChevronRight,
+  ChevronDown,
 } from "lucide-react";
 
 type Result = {
@@ -46,18 +42,12 @@ type Result = {
 type Photo = { file: File; url: string };
 const CAR = "/images/car-studio.png";
 
-function Brand({ footer = false }: { footer?: boolean }) {
+function Brand() {
   return (
-    <a
-      className={`brand ${footer ? "brand-footer" : ""}`}
-      href="#top"
-      aria-label="CarPrint — на главную"
-    >
-      <span className="brand-icon">
-        <Fingerprint size={30} strokeWidth={1.65} />
-      </span>
+    <a className="brand" href="#top" aria-label="CarPrint home">
+      <Fingerprint size={29} strokeWidth={1.7} />
       <span>
-        carprint<span className="brand-dot">AI</span>
+        carprint<span className="brand-period">.</span>
       </span>
     </a>
   );
@@ -65,12 +55,14 @@ function Brand({ footer = false }: { footer?: boolean }) {
 
 function PhotoInput({
   label,
+  caption,
   number,
   value,
   onChange,
   disabled,
 }: {
   label: string;
+  caption: string;
   number: string;
   value: Photo | null;
   onChange: (file: File | null) => void;
@@ -78,11 +70,6 @@ function PhotoInput({
 }) {
   const [drag, setDrag] = useState(false);
   const input = useRef<HTMLInputElement>(null);
-  const drop = (e: DragEvent) => {
-    e.preventDefault();
-    setDrag(false);
-    if (!disabled && e.dataTransfer.files[0]) onChange(e.dataTransfer.files[0]);
-  };
   return (
     <div
       className={`photo-input ${drag ? "dragging" : ""} ${value ? "has-photo" : ""}`}
@@ -91,20 +78,31 @@ function PhotoInput({
         if (!disabled) setDrag(true);
       }}
       onDragLeave={() => setDrag(false)}
-      onDrop={drop}
+      onDrop={(e) => {
+        e.preventDefault();
+        setDrag(false);
+        if (!disabled && e.dataTransfer.files[0])
+          onChange(e.dataTransfer.files[0]);
+      }}
     >
       <div className="photo-label">
-        <span>
-          {number} / {label}
-        </span>
+        <div>
+          <span className="step-dot">
+            {value ? <Check size={14} /> : number}
+          </span>
+          <span>
+            <strong>{label}</strong>
+            <small>{caption}</small>
+          </span>
+        </div>
         {value && (
           <button
             className="icon-button"
-            aria-label={`Удалить ${label.toLowerCase()}`}
+            aria-label={`Remove ${label.toLowerCase()}`}
             disabled={disabled}
             onClick={() => onChange(null)}
           >
-            <X size={16} />
+            <X size={18} />
           </button>
         )}
       </div>
@@ -112,35 +110,43 @@ function PhotoInput({
         className="photo-target"
         disabled={disabled}
         onClick={() => input.current?.click()}
-        aria-label={`Загрузить: ${label}`}
+        aria-label={`Upload ${label.toLowerCase()}`}
       >
         {value ? (
           <>
             <img src={value.url} alt={label} />
             <span className="replace-photo">
-              <Camera size={15} /> Заменить фотографию
+              <Camera size={16} /> Replace photo
             </span>
           </>
         ) : (
           <>
             <span className="upload-icon">
-              <Upload size={24} strokeWidth={1.5} />
+              <Upload size={23} />
             </span>
-            <strong>Добавьте фотографию</strong>
-            <span>или перетащите её сюда</span>
-            <small>JPG, PNG, WebP · до 8 МБ</small>
+            <strong>Drop your photo here</strong>
+            <span>
+              or <u>browse files</u>
+            </span>
+            <small>JPG, PNG or WebP · up to 8 MB</small>
           </>
         )}
       </button>
+      {value && (
+        <div className="file-info">
+          <span title={value.file.name}>{value.file.name}</span>
+          <small>{(value.file.size / 1024 / 1024).toFixed(1)} MB</small>
+        </div>
+      )}
       <input
         ref={input}
         type="file"
         accept="image/jpeg,image/png,image/webp"
         hidden
         disabled={disabled}
-        onChange={(e: ChangeEvent<HTMLInputElement>) => {
-          const f = e.target.files?.[0];
-          if (f) onChange(f);
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) onChange(file);
           e.target.value = "";
         }}
       />
@@ -151,103 +157,114 @@ function PhotoInput({
 function Comparison({ result }: { result: Result }) {
   const [tab, setTab] = useState<"points" | "overlay">("points");
   const [split, setSplit] = useState(50);
-  const download = () => {
+  function download() {
     const {
       evidence_image: _e,
       reference_image: _r,
       aligned_image: _a,
       ...report
     } = result;
-    const blob = new Blob(
-      [
-        JSON.stringify(
-          { ...report, exported_at: new Date().toISOString() },
-          null,
-          2,
-        ),
-      ],
-      { type: "application/json" },
+    const url = URL.createObjectURL(
+      new Blob(
+        [
+          JSON.stringify(
+            { ...report, exported_at: new Date().toISOString() },
+            null,
+            2,
+          ),
+        ],
+        { type: "application/json" },
+      ),
     );
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `carprint-report-${Date.now()}.json`;
-    a.click();
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `carprint-report-${Date.now()}.json`;
+    link.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
-  };
+  }
   return (
-    <div className="results" aria-live="polite">
+    <div className="results">
       <div className="result-heading">
         <div>
-          <span className="mono small">РЕЗУЛЬТАТ СРАВНЕНИЯ</span>
+          <span className="eyebrow">YOUR COMPARISON</span>
           <h3>{result.message}</h3>
         </div>
         <span className="review-tag">
-          <Focus size={14} /> REVIEW · проверка экспертом
+          <Focus size={15} /> Expert review needed
         </span>
       </div>
       <div className="result-metrics">
         <div>
           <strong>{result.inliers}</strong>
-          <span>устойчивых совпадений</span>
+          <span>Stable matches</span>
         </div>
         <div>
           <strong>
-            {result.reprojection_error_px ?? "—"}
-            <small> px</small>
+            {result.reprojection_error_px ?? "—"} <small>px</small>
           </strong>
-          <span>медианная ошибка</span>
+          <span>Median alignment error</span>
         </div>
         <div>
           <strong>
-            {result.elapsed_ms}
-            <small> мс</small>
+            {result.coverage_percent}
+            <small>%</small>
           </strong>
-          <span>обработка на сервере</span>
+          <span>Reference area covered</span>
+        </div>
+        <div>
+          <strong>
+            {(result.elapsed_ms / 1000).toFixed(2)} <small>s</small>
+          </strong>
+          <span>Server processing time</span>
         </div>
       </div>
       <div className="result-toolbar">
-        <div className="view-tabs">
+        <div className="view-tabs" aria-label="Comparison view">
           <button
-            className={tab === "points" ? "active" : ""}
+            aria-pressed={tab === "points"}
             onClick={() => setTab("points")}
           >
-            Совпавшие точки
+            Matching points
           </button>
           <button
-            className={tab === "overlay" ? "active" : ""}
+            aria-pressed={tab === "overlay"}
             disabled={!result.aligned_image}
+            title={
+              !result.aligned_image
+                ? "Alignment requires more stable matches"
+                : undefined
+            }
             onClick={() => setTab("overlay")}
           >
-            Совмещение
+            Aligned overlay
           </button>
         </div>
         <button className="text-button" onClick={download}>
-          <Download size={16} /> Скачать отчёт
+          <Download size={16} /> Download report
         </button>
       </div>
       {tab === "points" ? (
         <img
           className="evidence-image"
           src={result.evidence_image}
-          alt="Реальные геометрически согласованные точки, соединённые линиями между фотографиями"
+          alt="Geometrically consistent points linked between both photos"
         />
       ) : (
         <div className="overlay-comparison">
-          <img src={result.reference_image} alt="Исходный снимок" />
+          <img src={result.reference_image} alt="Reference photo" />
           <img
             className="aligned-image"
             src={result.aligned_image!}
-            alt="Совмещённый повторный снимок"
+            alt="Aligned follow-up photo"
             style={{ clipPath: `inset(0 0 0 ${split}%)` }}
           />
           <div className="compare-divider" style={{ left: `${split}%` }}>
             <MoveHorizontal size={20} />
           </div>
-          <span className="before-label">Исходный</span>
-          <span className="after-label">Повторный</span>
+          <span className="before-label">Reference</span>
+          <span className="after-label">Follow-up</span>
           <input
-            aria-label="Положение разделителя сравнения"
+            aria-label="Comparison divider position"
             type="range"
             min="0"
             max="100"
@@ -257,13 +274,15 @@ function Comparison({ result }: { result: Result }) {
         </div>
       )}
       <div className="result-notes">
-        <AlertCircle size={19} />
+        <AlertCircle size={20} />
         <div>
-          <strong>Геометрия — основание для проверки, а не вердикт.</strong>
+          <strong>Evidence to review. A person makes the decision.</strong>
           {result.warnings.map((w) => (
             <p key={w}>{w}</p>
           ))}
-          <p>Детекция повреждений в этой версии не выполняется.</p>
+          <p>
+            This version does not detect damage or confirm vehicle identity.
+          </p>
         </div>
       </div>
     </div>
@@ -284,42 +303,60 @@ function Workspace() {
   const [isExample, setIsExample] = useState(false);
   const [guide, setGuide] = useState(false);
   const resultRef = useRef<HTMLDivElement>(null);
+  const requestRef = useRef<AbortController | null>(null);
+  const locked = busy || loadingExample;
+  const count = photos.filter(Boolean).length;
   useEffect(
     () => () => {
       photosRef.current.forEach((p) => p && URL.revokeObjectURL(p.url));
+      requestRef.current?.abort();
     },
     [],
   );
-  const change = (index: number, file: File | null) => {
+  function change(index: number, file: File | null) {
+    if (locked) return;
     if (
       file &&
       (!["image/jpeg", "image/png", "image/webp"].includes(file.type) ||
-        file.size > 8 * 1024 * 1024)
+        file.size > 8 * 1024 * 1024 ||
+        file.size === 0)
     ) {
-      setError("Выберите JPG, PNG или WebP размером до 8 МБ.");
+      setError("Choose a JPG, PNG or WebP image between 1 byte and 8 MB.");
       return;
     }
     setError("");
     setResult(null);
     setIsExample(false);
-    setPhotos((old) => {
-      const next: [Photo | null, Photo | null] = [...old];
-      if (next[index]) URL.revokeObjectURL(next[index]!.url);
-      next[index] = file ? { file, url: URL.createObjectURL(file) } : null;
-      return next;
-    });
-  };
-  const example = async () => {
+    const next: [Photo | null, Photo | null] = [...photos];
+    if (next[index]) URL.revokeObjectURL(next[index]!.url);
+    next[index] = file ? { file, url: URL.createObjectURL(file) } : null;
+    setPhotos(next);
+  }
+  function reset() {
+    photos.forEach((p) => p && URL.revokeObjectURL(p.url));
+    setPhotos([null, null]);
+    setResult(null);
+    setError("");
+    setIsExample(false);
+  }
+  async function example() {
     setLoadingExample(true);
     setError("");
     setResult(null);
+    const controller = new AbortController();
+    requestRef.current = controller;
+    const timeout = setTimeout(() => controller.abort(), 30000);
     try {
       const files = await Promise.all(
         ["reference", "current"].map(async (name) => {
-          const res = await fetch(`/api/example/${name}`);
-          if (!res.ok) throw new Error();
-          const b = await res.blob();
-          return new File([b], `${name}-synthetic.jpg`, { type: "image/jpeg" });
+          const res = await fetch(`/api/example/${name}`, {
+            signal: controller.signal,
+          });
+          if (!res.ok || !res.headers.get("content-type")?.startsWith("image/"))
+            throw new Error();
+          return new File([await res.blob()], `${name}-sample.jpg`, {
+            type: "image/jpeg",
+          });
         }),
       );
       photosRef.current.forEach((p) => p && URL.revokeObjectURL(p.url));
@@ -332,17 +369,21 @@ function Workspace() {
       setIsExample(true);
     } catch {
       setError(
-        "Не удалось загрузить пример. Проверьте подключение к серверу или добавьте свои фотографии.",
+        "The sample could not be loaded. Check the server connection or upload your own photos.",
       );
     } finally {
+      clearTimeout(timeout);
       setLoadingExample(false);
     }
-  };
-  const compare = async () => {
-    if (!photos[0] || !photos[1]) return;
+  }
+  async function compare() {
+    if (!photos[0] || !photos[1] || locked) return;
     setBusy(true);
     setError("");
     setResult(null);
+    const controller = new AbortController();
+    requestRef.current = controller;
+    const timeout = setTimeout(() => controller.abort(), 60000);
     const data = new FormData();
     data.append("reference", photos[0].file);
     data.append("current", photos[1].file);
@@ -350,171 +391,220 @@ function Workspace() {
       const res = await fetch("/api/compare", {
         method: "POST",
         body: data,
-        signal: AbortSignal.timeout(60000),
+        signal: controller.signal,
       });
       if (!res.ok) {
-        let detail = "Не удалось обработать фотографии. Попробуйте ещё раз.";
+        let detail = "We could not process these photos. Please try again.";
         try {
           const body = await res.json();
           if (typeof body.detail === "string") detail = body.detail;
         } catch {
-          /* Non-JSON server error. */
+          /* Retain the readable fallback. */
         }
         throw new Error(detail);
       }
-      const body = await res.json();
-      setResult(body);
-      setTimeout(
-        () =>
-          resultRef.current?.scrollIntoView({
-            behavior: "smooth",
-            block: "start",
-          }),
-        100,
-      );
+      if (!res.headers.get("content-type")?.includes("application/json"))
+        throw new Error(
+          "The comparison service is unavailable. Please try again later.",
+        );
+      setResult(await res.json());
+      setTimeout(() => {
+        resultRef.current?.focus({ preventScroll: true });
+        resultRef.current?.scrollIntoView({
+          behavior: window.matchMedia("(prefers-reduced-motion: reduce)")
+            .matches
+            ? "instant"
+            : "smooth",
+          block: "start",
+        });
+      }, 100);
     } catch (e) {
       setError(
-        e instanceof Error && e.name !== "TypeError"
-          ? e.message
-          : "Сервер сравнения недоступен. Проверьте соединение и повторите попытку.",
+        e instanceof Error && e.name === "AbortError"
+          ? "This comparison took too long. Try smaller photos or check your connection."
+          : e instanceof Error && e.name !== "TypeError"
+            ? e.message
+            : "The comparison service is unavailable. Check your connection and try again.",
       );
     } finally {
+      clearTimeout(timeout);
       setBusy(false);
     }
-  };
+  }
   return (
-    <section className="workspace section-pad" id="workspace">
-      <div className="section-heading reveal">
+    <section
+      className="workspace section"
+      id="workspace"
+      aria-labelledby="workspace-title"
+    >
+      <div className="section-heading">
         <div>
           <span className="eyebrow">
-            <span className="status-dot" /> ПОПРОБУЙТЕ В ДЕЛЕ
+            <span className="status-dot" /> THE COMPARISON STUDIO
           </span>
-          <h2>
-            От фотографий
-            <br />к <span className="serif">доказательствам.</span>
+          <h2 id="workspace-title">
+            Two photos.
+            <br />
+            <span className="muted">A clearer picture.</span>
           </h2>
         </div>
         <p>
-          Два снимка одной детали.
-          <br />
-          Реальные совпадения. Понятный результат.
+          Look closer at the same detail, across two inspections. Start with
+          your photos or explore a sample.
         </p>
       </div>
-      <div className="lab reveal">
+      <div className="lab">
         <div className="lab-top">
-          <span>
+          <div>
             <ScanLine size={20} />
-            <strong>Лаборатория CarPrint</strong>
+            <strong>New comparison</strong>
             <span className="beta-tag">BETA</span>
-          </span>
+          </div>
           <button
             className="text-button"
             onClick={() => setGuide(!guide)}
             aria-expanded={guide}
+            aria-controls="capture-guide"
           >
-            {guide ? "Скрыть подсказки" : "Как фотографировать"}{" "}
-            {guide ? <Minus size={15} /> : <Plus size={15} />}
+            <Camera size={16} /> Photo tips{" "}
+            <ChevronDown size={16} className={guide ? "rotated" : ""} />
           </button>
         </div>
+        <ol className="workflow">
+          <li className={count === 2 ? "complete" : "current"}>
+            <span>{count === 2 ? <Check size={13} /> : "1"}</span> Add two
+            photos
+          </li>
+          <li className={busy ? "current" : result ? "complete" : ""}>
+            <span>2</span> Compare details
+          </li>
+          <li className={result ? "current" : ""}>
+            <span>3</span> Review evidence
+          </li>
+        </ol>
         {guide && (
-          <div className="capture-guide">
+          <div className="capture-guide" id="capture-guide">
             <div>
-              <Camera size={22} />
-              <strong>Одна и та же деталь</strong>
-              <p>Снимите дверь, диск или крыло крупно в обоих осмотрах.</p>
-            </div>
-            <div>
-              <Focus size={22} />
-              <strong>Похожий ракурс</strong>
-              <p>Держите камеру ровно. Избегайте бликов, грязи и смаза.</p>
-            </div>
-            <div>
-              <ShieldCheck size={22} />
-              <strong>Индивидуальные следы</strong>
+              <Camera size={21} />
+              <strong>The same detail</strong>
               <p>
-                Включите в кадр сколы или потёртости. Не загружайте личные
-                данные.
+                Photograph the same door, wheel or panel in both inspections.
+              </p>
+            </div>
+            <div>
+              <Focus size={21} />
+              <strong>A similar angle</strong>
+              <p>
+                Use even light. Keep the camera steady and avoid reflections.
+              </p>
+            </div>
+            <div>
+              <ScanLine size={21} />
+              <strong>Distinctive features</strong>
+              <p>
+                Include marks or textured details. Use images at least 96 × 96
+                pixels.
               </p>
             </div>
           </div>
         )}
         <div className="upload-grid">
           <PhotoInput
-            label="Исходный осмотр"
+            label="Reference photo"
+            caption="The original inspection"
             number="01"
             value={photos[0]}
             onChange={(f) => change(0, f)}
-            disabled={busy || loadingExample}
+            disabled={locked}
           />
-          <span className="upload-connector">
-            <ArrowRight size={20} />
-          </span>
+          <div className="upload-connector">
+            <Plus size={20} />
+          </div>
           <PhotoInput
-            label="Повторный осмотр"
+            label="Follow-up photo"
+            caption="The detail you want to compare"
             number="02"
             value={photos[1]}
             onChange={(f) => change(1, f)}
-            disabled={busy || loadingExample}
+            disabled={locked}
           />
         </div>
         {isExample && (
           <p className="example-notice">
-            <AlertCircle size={15} /> Синтетический пример: AI-изображение и его
-            преобразованная копия. Демонстрирует геометрию, а не точность
-            проверки реальных автомобилей.
+            <AlertCircle size={16} />
+            <span>
+              Synthetic sample: an AI-generated image and a transformed copy.
+              This demonstrates alignment, not accuracy on real vehicle
+              inspections.
+            </span>
           </p>
         )}
         {error && (
           <p className="error-message" role="alert">
-            <AlertCircle size={18} />
+            <AlertCircle size={19} />
             {error}
           </p>
         )}
         <div className="lab-actions">
-          <div>
-            <button
-              className="text-button example-button"
-              onClick={example}
-              disabled={busy || loadingExample}
-            >
+          <div className="sample-actions">
+            <button className="text-button" onClick={example} disabled={locked}>
               {loadingExample ? (
-                <LoaderCircle className="spin" size={17} />
+                <LoaderCircle className="spin" size={16} />
               ) : (
                 <Play size={15} />
-              )}{" "}
-              {loadingExample ? "Загружаем…" : "Использовать пример"}
+              )}
+              {loadingExample ? "Loading sample…" : "Try a sample"}
             </button>
-            <span className="local-note">
-              <ShieldCheck size={13} /> Без постоянного хранения фотографий
-            </span>
-          </div>
-          <button
-            className="button button-lime"
-            onClick={compare}
-            disabled={!photos[0] || !photos[1] || busy || loadingExample}
-          >
-            {busy ? (
-              <>
-                <LoaderCircle className="spin" size={19} /> Сопоставляем детали…
-              </>
-            ) : (
-              <>
-                Сравнить снимки <ArrowUpRight size={20} />
-              </>
+            {count > 0 && (
+              <button
+                className="text-button reset-button"
+                onClick={reset}
+                disabled={locked}
+              >
+                <RotateCcw size={15} /> Clear
+              </button>
             )}
-          </button>
+          </div>
+          <div className="compare-action">
+            <span role="status">
+              {busy
+                ? "Finding and aligning visual features…"
+                : count < 2
+                  ? `${2 - count} more ${count === 0 ? "photos" : "photo"} to get started`
+                  : "Ready when you are"}
+            </span>
+            <button
+              className="button button-dark"
+              onClick={compare}
+              disabled={count < 2 || locked}
+            >
+              {busy ? (
+                <>
+                  <LoaderCircle className="spin" size={18} /> Comparing…
+                </>
+              ) : (
+                <>
+                  Compare photos <ArrowRight size={18} />
+                </>
+              )}
+            </button>
+          </div>
         </div>
-        <div ref={resultRef} className="result-anchor">
+        <div
+          ref={resultRef}
+          className="result-anchor"
+          tabIndex={-1}
+          aria-label="Comparison results"
+        >
           {result && <Comparison result={result} />}
         </div>
       </div>
       <div className="lab-footnote">
-        <span className="mono">SIFT + RANSAC</span>
         <span>
-          Прототип геометрического сопоставления · решение остаётся за
-          специалистом
+          <ShieldCheck size={15} /> No permanent photo storage
         </span>
-        <span className="mono">VERSION 0.1</span>
+        <span>Geometric comparison · Human review required</span>
+        <span className="mono">SIFT + RANSAC</span>
       </div>
     </section>
   );
@@ -522,581 +612,307 @@ function Workspace() {
 
 const faqs = [
   [
-    "Это точно тот же автомобиль?",
-    "Совпадения на фотографиях дают визуальные основания для проверки. Серийные детали разных машин могут совпадать. Для подтверждения нужны индивидуальные следы, несколько независимых зон и при необходимости VIN. Текущий прототип возвращает REVIEW — проверка специалистом.",
+    "What can CarPrint tell me?",
+    "CarPrint finds geometrically consistent features between two photos and aligns them when there is enough evidence. It helps you inspect details; it does not confirm that two photos show the same physical vehicle.",
   ],
   [
-    "Что уже работает в прототипе?",
-    "Загрузка произвольных снимков JPG, PNG и WebP, поиск признаков SIFT, геометрический контроль RANSAC, визуализация совпадений, совмещение фотографий и экспорт отчёта. История осмотров, распознавание повреждений и обученные AI-модели — следующие этапы продукта.",
+    "Does it automatically detect damage?",
+    "Not in this version. Review the aligned photos for yourself. Damage detection, VIN recognition and inspection history are future capabilities, not features of this prototype.",
   ],
   [
-    "Можно снимать обычным телефоном?",
-    "Да. Лучше снимать одну и ту же деталь крупно, с похожего ракурса и при рассеянном свете. Фотографии принимаются прямо из галереи телефона. Блики, сильный смаз и грязь мешают сопоставлению — приложение сообщит о недостатке доказательств.",
+    "What makes a good comparison?",
+    "Use close-up photos of the same detail, from a similar angle and under even lighting. Sharp, textured areas work best. Upload JPG, PNG or WebP files up to 8 MB each, at least 96 × 96 pixels and no more than 20 megapixels.",
   ],
   [
-    "Где обрабатываются и хранятся фотографии?",
-    "Изображения передаются на сервер этого приложения и обрабатываются с помощью OpenCV. После ответа сервера временные загрузки удаляются: постоянного хранилища и базы клиентов нет. После обновления страницы снимки и результат исчезают; отчёт можно скачать до закрытия страницы.",
+    "What happens to my photos?",
+    "Photos are processed on the server without external AI providers. There is no permanent photo storage or customer database. Upload handling can use a temporary file, which is closed and deleted after the request.",
+  ],
+  [
+    "What is included in the report?",
+    "The downloadable JSON report includes match counts, alignment error, coverage, quality warnings, file hashes, algorithm version and processing time. It is a technical record for review, not an identity certificate.",
   ],
 ];
 
 export default function App() {
   const [menu, setMenu] = useState(false);
-  const [intro, setIntro] = useState(
-    () => !window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-  );
-  const [activePoint, setActivePoint] = useState(0);
-  const [activeStep, setActiveStep] = useState(0);
-  const [openFaq, setOpenFaq] = useState<number | null>(0);
+  const menuButton = useRef<HTMLButtonElement>(null);
   useEffect(() => {
-    const timer = setTimeout(() => setIntro(false), 1400);
-    return () => clearTimeout(timer);
-  }, []);
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) =>
-        entries.forEach((e) => {
-          if (e.isIntersecting) {
-            e.target.classList.add("visible");
-            observer.unobserve(e.target);
-          }
-        }),
-      { threshold: 0.08 },
-    );
-    document.querySelectorAll(".reveal").forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
-  }, []);
-  useEffect(() => {
-    if (!menu) return;
-    const close = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setMenu(false);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && menu) {
+        setMenu(false);
+        menuButton.current?.focus();
+      }
     };
-    document.addEventListener("keydown", close);
-    return () => document.removeEventListener("keydown", close);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
   }, [menu]);
-  const steps = [
-    {
-      icon: Camera,
-      title: "Зафиксируйте состояние",
-      text: "Снимите автомобиль и индивидуальные следы на деталях. Хороший исходный кадр — начало доказательной истории.",
-      label: "01 / CAPTURE",
-      heading: "Всё начинается\nс одного снимка.",
-      tag: "Смартфон. Свет. Нужный ракурс.",
-    },
-    {
-      icon: ScanEye,
-      title: "Сопоставьте детали",
-      text: "Загрузите повторный снимок. Алгоритм найдёт локальные признаки и проверит их геометрическое соответствие.",
-      label: "02 / COMPARE",
-      heading: "Знакомая деталь.\nНовый взгляд.",
-      tag: "Локальные признаки + геометрия",
-    },
-    {
-      icon: ShieldCheck,
-      title: "Изучите доказательства",
-      text: "Посмотрите совпавшие точки и совмещённые снимки. Сохраните отчёт и передайте результат специалисту.",
-      label: "03 / REVIEW",
-      heading: "Каждый вывод\nможно проверить.",
-      tag: "Визуальные основания для решения",
-    },
-  ];
   return (
     <>
-      <a href="#main" className="skip-link">
-        Перейти к содержимому
+      <div id="top" />
+      <a className="skip-link" href="#workspace">
+        Skip to comparison
       </a>
-      {intro && (
-        <div className="intro" aria-hidden="true">
-          <Fingerprint size={76} strokeWidth={1} />
-          <span>CARPRINT</span>
-          <div className="intro-track">
-            <i />
-          </div>
-          <small>EVERY DETAIL TELLS A STORY</small>
-        </div>
-      )}
       <header className="header">
         <div className="header-inner">
           <Brand />
           <nav
-            className={menu ? "nav open" : "nav"}
-            aria-label="Основная навигация"
+            id="main-navigation"
+            className={menu ? "navigation open" : "navigation"}
+            aria-label="Main navigation"
           >
             <a href="#how-it-works" onClick={() => setMenu(false)}>
-              Как это работает
-            </a>
-            <a href="#technology" onClick={() => setMenu(false)}>
-              Технология
+              How it works
             </a>
             <a href="#solutions" onClick={() => setMenu(false)}>
-              Для бизнеса
+              Built for your workflow
             </a>
-            <a
-              className="mobile-cta"
-              href="#workspace"
-              onClick={() => setMenu(false)}
-            >
-              Начать проверку <ArrowUpRight size={17} />
+            <a href="#faq" onClick={() => setMenu(false)}>
+              FAQs
             </a>
           </nav>
-          <div className="header-actions">
-            <span className="language">
-              RU <span>/</span> <span className="mono">01</span>
-            </span>
-            <a className="button button-outline header-cta" href="#workspace">
-              Начать проверку <ArrowUpRight size={17} />
-            </a>
-            <button
-              className="menu-button"
-              aria-label={menu ? "Закрыть меню" : "Открыть меню"}
-              aria-expanded={menu}
-              onClick={() => setMenu(!menu)}
-            >
-              {menu ? <X /> : <Menu />}
-            </button>
-          </div>
+          <a className="header-cta" href="#workspace">
+            Open studio <ArrowUpRight size={17} />
+          </a>
+          <button
+            ref={menuButton}
+            className="menu-button icon-button"
+            aria-label={menu ? "Close menu" : "Open menu"}
+            aria-expanded={menu}
+            aria-controls="main-navigation"
+            onClick={() => setMenu(!menu)}
+          >
+            {menu ? <X /> : <Menu />}
+          </button>
         </div>
       </header>
-      <main id="main">
-        <section className="hero" id="top">
-          <div className="hero-grid" />
-          <div className="hero-orbit" />
-          <div className="hero-image">
-            <img
-              src={CAR}
-              alt="Серебристый автомобиль в тёмной студии, подготовленный к визуальному осмотру"
-              fetchPriority="high"
-            />
-            <div className="scan-beam" />
-          </div>
-          <div className="hero-content">
-            <span className="eyebrow hero-eyebrow">
-              <span className="status-dot" /> VEHICLE VERIFICATION INTELLIGENCE
+      <main>
+        <section className="hero">
+          <div className="hero-copy">
+            <span className="eyebrow">
+              <span className="status-dot" /> VEHICLE INSPECTIONS, IN FOCUS
             </span>
             <h1>
-              У каждой машины
+              Every detail.
+              <br />A part of
               <br />
-              есть свой
-              <br />
-              <span className="hero-accent">
-                отпечаток<span className="period">.</span>
+              <span className="hero-last">
+                the story.<span className="asterisk">✳</span>
               </span>
             </h1>
             <p>
-              Узнайте автомобиль по деталям.
-              <br />
-              Сравните состояние. Сохраните доказательства.
+              Turn two vehicle photos into a clearer conversation. Compare the
+              details. See the evidence. Make an informed call.
             </p>
-            <div className="hero-buttons">
+            <div className="hero-actions">
               <a className="button button-lime" href="#workspace">
-                Проверить автомобиль <ArrowUpRight size={20} />
+                Compare your photos <ArrowUpRight size={19} />
               </a>
-              <a className="button hero-secondary" href="#how-it-works">
-                <span className="play-circle">
-                  <Play size={12} fill="currentColor" />
-                </span>{" "}
-                Как это работает
+              <a className="hero-secondary" href="#how-it-works">
+                See how it works <ArrowDown size={16} />
               </a>
             </div>
             <div className="hero-note">
-              <ShieldCheck size={15} />
-              <span>Каждая деталь имеет значение.</span>
+              <span className="mini-cross">+</span> Real visual evidence. Always
+              reviewed by a human.
             </div>
           </div>
-          <div className="scan-status">
-            <span className="status-dot" />
-            <span className="mono">CARPRINT VISION</span>
-            <ScanLine size={17} />
-          </div>
-          <div
-            className={`car-point point-one ${activePoint === 0 ? "selected" : ""}`}
-          >
-            <button
-              onClick={() => setActivePoint(activePoint === 0 ? -1 : 0)}
-              aria-label="Показать область осмотра диска"
-              aria-expanded={activePoint === 0}
-            >
-              <Plus size={15} />
-            </button>
-            {activePoint === 0 && (
-              <div className="point-label">
-                <span className="mono">01 / ОБЛАСТЬ ОСМОТРА</span>
-                <strong>Индивидуальные следы</strong>
-                <small>Диск · кромки · поверхность</small>
+          <div className="hero-visual">
+            <img
+              src={CAR}
+              alt="Silver sports sedan in a dark studio"
+              fetchPriority="high"
+            />
+            <div className="visual-top">
+              <span className="mono">CARPRINT / VISUAL INTELLIGENCE</span>
+              <span className="visual-live">
+                <span /> PROTOTYPE
+              </span>
+            </div>
+            <div className="focus-box">
+              <i />
+              <i />
+              <i />
+              <i />
+              <span className="focus-pin" />
+            </div>
+            <div className="detail-callout">
+              <span className="callout-icon">
+                <ScanLine size={22} />
+              </span>
+              <div>
+                <small>A CLOSER LOOK</small>
+                <strong>The details make the difference.</strong>
               </div>
-            )}
-          </div>
-          <div
-            className={`car-point point-two ${activePoint === 1 ? "selected" : ""}`}
-          >
-            <button
-              onClick={() => setActivePoint(activePoint === 1 ? -1 : 1)}
-              aria-label="Показать область осмотра двери"
-              aria-expanded={activePoint === 1}
-            >
-              <Plus size={15} />
-            </button>
-            {activePoint === 1 && (
-              <div className="point-label">
-                <span className="mono">02 / ОБЛАСТЬ ОСМОТРА</span>
-                <strong>История поверхности</strong>
-                <small>Дверь · сколы · потёртости</small>
-              </div>
-            )}
-          </div>
-          <div className="hero-bottom">
-            <a href="#technology" className="scroll-cue">
-              <span>
-                <ArrowDown size={16} />
-              </span>{" "}
-              Откройте больше
-            </a>
-            <span className="hero-image-note">
-              AI-визуализация · концепция осмотра
-            </span>
-            <span className="mono hero-coordinate">
-              41°18′ N &nbsp; 69°16′ E
-            </span>
+            </div>
+            <div className="visual-bottom">
+              <span className="mono">01 / A NEW PERSPECTIVE</span>
+              <span>Illustrative image</span>
+            </div>
           </div>
         </section>
         <div className="value-strip">
           <div>
-            <Fingerprint size={23} />
-            <span>
-              Идентичность <strong>в деталях</strong>
-            </span>
+            <ScanLine size={19} />
+            <span>Compare visual features</span>
           </div>
           <div>
-            <Layers3 size={23} />
-            <span>
-              Состояние <strong>во времени</strong>
-            </span>
+            <MoveHorizontal size={19} />
+            <span>Align the same detail</span>
           </div>
           <div>
-            <ShieldCheck size={23} />
-            <span>
-              Решения <strong>на основе доказательств</strong>
-            </span>
+            <Download size={19} />
+            <span>Keep the evidence</span>
           </div>
-          <span className="strip-end mono">
-            BUILT TO SEE MORE <ArrowUpRight size={16} />
-          </span>
+          <div>
+            <ShieldCheck size={19} />
+            <span>You make the final call</span>
+          </div>
         </div>
-
-        <section className="technology section-pad" id="technology">
-          <div className="section-heading reveal">
+        <section className="section process" id="how-it-works">
+          <div className="section-heading">
             <div>
-              <span className="eyebrow dark-eyebrow">
-                <span className="tiny-cross">+</span> БОЛЬШЕ, ЧЕМ ФОТОГРАФИЯ
-              </span>
+              <span className="eyebrow">LESS GUESSWORK. MORE CONTEXT.</span>
               <h2>
-                Знакомая модель.
+                A second look.
                 <br />
-                <span className="serif">Уникальная история.</span>
+                <span className="muted">In three simple steps.</span>
               </h2>
             </div>
             <p>
-              Тысячи машин выглядят одинаково.
-              <br />
-              Индивидуальные следы рассказывают,
-              <br />
-              что происходило именно с этой.
+              From the first inspection to the final handover, bring the details
+              into the same frame.
             </p>
           </div>
-          <div className="feature-grid">
-            <article className="feature-card feature-identity reveal">
-              <div className="card-top">
-                <span className="mono">01 / IDENTITY</span>
-                <Fingerprint size={24} />
-              </div>
-              <div className="fingerprint-art">
-                <Fingerprint strokeWidth={0.65} />
-                <div className="fingerprint-cross cross-a" />
-                <div className="fingerprint-cross cross-b" />
-                <span className="fingerprint-line" />
-                <span className="art-caption mono">UNIQUE BY NATURE</span>
-              </div>
-              <div className="card-copy">
-                <h3>Та же машина?</h3>
-                <p>
-                  Сопоставляйте индивидуальные признаки.
-                  <br />
-                  Проверяйте то, что делает машину уникальной.
-                </p>
-              </div>
-            </article>
-            <article className="feature-card feature-history reveal">
-              <div className="card-top">
-                <span className="mono">02 / CONDITION</span>
-                <Layers3 size={23} />
-              </div>
-              <div className="history-art">
-                <img src={CAR} alt="Детали кузова автомобиля" loading="lazy" />
-                <div className="history-frame">
-                  <span />
-                  <span />
-                  <span />
-                  <span />
-                </div>
-                <div className="history-pill">
-                  <span className="status-dot" /> В фокусе — каждая деталь
-                </div>
-              </div>
-              <div className="card-copy">
-                <h3>Что изменилось?</h3>
-                <p>
-                  Сравнивайте осмотры и замечайте изменения.
-                  <br />
-                  История начинается с исходного снимка.
-                </p>
-              </div>
-            </article>
-            <article className="feature-card feature-evidence reveal">
-              <div className="card-top">
-                <span className="mono">03 / EVIDENCE</span>
-                <ShieldCheck size={23} />
-              </div>
-              <div className="evidence-art">
-                <div className="mini-report">
-                  <div>
-                    <span className="mini-logo">
-                      <Fingerprint size={16} /> carprint
-                    </span>
-                    <span className="mono">REPORT</span>
-                  </div>
-                  <span className="report-line long" />
-                  <span className="report-line" />
-                  <div className="report-check">
-                    <Check size={15} />
-                    <span>Визуальные совпадения</span>
-                  </div>
-                  <div className="report-check">
-                    <Check size={15} />
-                    <span>Геометрическое совмещение</span>
-                  </div>
-                  <div className="report-check">
-                    <Check size={15} />
-                    <span>Проверяемый результат</span>
-                  </div>
-                  <div className="report-bottom">
-                    <span className="mono">EXPERT REVIEW</span>
-                    <ShieldCheck size={20} />
-                  </div>
-                </div>
-              </div>
-              <div className="card-copy">
-                <h3>На чём основан вывод?</h3>
-                <p>
-                  Изучайте визуальные доказательства.
-                  <br />
-                  Решение принимает человек.
-                </p>
-              </div>
-            </article>
-          </div>
-          <div className="technology-note">
-            <span className="mono">THE CARPRINT APPROACH</span>
-            <p>
-              Геометрия + индивидуальные признаки + качество снимка + экспертная
-              проверка.
-            </p>
-          </div>
-        </section>
-
-        <section className="how section-pad" id="how-it-works">
-          <div className="section-heading reveal">
-            <div>
-              <span className="eyebrow">
-                <span className="tiny-cross">+</span> ПРОСТОЙ ПРОЦЕСС.
-                ПРОВЕРЯЕМЫЙ РЕЗУЛЬТАТ.
-              </span>
-              <h2>
-                Три шага.
-                <br />
-                <span className="serif">Полная картина.</span>
-              </h2>
-            </div>
-            <a className="text-link" href="#workspace">
-              Попробовать сейчас <ArrowUpRight size={21} />
-            </a>
-          </div>
-          <div className="how-grid reveal">
-            <div className="steps">
-              {steps.map((s, i) => (
-                <button
-                  key={s.title}
-                  className={`step ${activeStep === i ? "active" : ""}`}
-                  onClick={() => setActiveStep(i)}
-                  aria-expanded={activeStep === i}
-                >
-                  <span className="step-number mono">0{i + 1}</span>
-                  <div>
-                    <h3>{s.title}</h3>
-                    {activeStep === i && <p>{s.text}</p>}
-                  </div>
-                  <ArrowUpRight size={20} />
-                </button>
-              ))}
-            </div>
-            <div className={`process-visual process-${activeStep}`}>
-              <img src={CAR} alt="Автомобиль для фотоосмотра" loading="lazy" />
-              <div className="process-shade" />
-              <span className="process-label mono">
-                {steps[activeStep].label}
-              </span>
-              <h3 key={activeStep}>{steps[activeStep].heading}</h3>
-              <div className="focus-corners">
-                <i />
-                <i />
-                <i />
-                <i />
-                {activeStep === 1 && <div className="scan-beam" />}
-                {activeStep === 2 && (
-                  <ShieldCheck
-                    className="process-check"
-                    size={60}
-                    strokeWidth={1}
-                  />
-                )}
-              </div>
-              <span className="process-tag">
-                <span className="status-dot" />
-                {steps[activeStep].tag}
-              </span>
-              <span className="mono process-count">0{activeStep + 1} / 03</span>
-            </div>
-          </div>
-        </section>
-
-        <Workspace />
-
-        <section className="solutions section-pad" id="solutions">
-          <div className="section-heading reveal">
-            <div>
-              <span className="eyebrow dark-eyebrow">
-                <span className="tiny-cross">+</span> СОЗДАНО ДЛЯ АВТОБИЗНЕСА
-              </span>
-              <h2>
-                Меньше споров.
-                <br />
-                <span className="serif">Больше прозрачности.</span>
-              </h2>
-            </div>
-            <p>
-              От первого осмотра до передачи ключей.
-              <br />
-              Визуальная история на каждом этапе
-              <br />
-              работы с автомобилем.
-            </p>
-          </div>
-          <div className="solutions-grid">
+          <div className="process-grid">
             {[
               {
-                number: "01",
-                title: "Дилерам и сервисам",
-                text: "Фиксируйте состояние при приёмке и выдаче. Разбирайте спорные случаи по снимкам.",
                 icon: Camera,
-                tag: "ПРИЁМКА → ВЫДАЧА",
+                title: "Capture the detail",
+                text: "Choose two photos of the same part. Similar angles and clear lighting give you a better starting point.",
+                label: "TWO PHOTOS. ONE DETAIL.",
               },
               {
-                number: "02",
-                title: "Trade-in и выкупу",
-                text: "Сравнивайте состояние машины при оценке и передаче. Замечайте изменения до сделки.",
-                icon: RotateCcw,
-                tag: "ОЦЕНКА → СДЕЛКА",
+                icon: ScanLine,
+                title: "Find common ground",
+                text: "CarPrint finds shared visual features and checks how consistently they line up across both images.",
+                label: "VISIBLE, TRACEABLE MATCHES",
               },
               {
-                number: "03",
-                title: "Автопаркам и аренде",
-                text: "Сопоставляйте фотографии до и после поездки. Сделайте передачу автомобиля прозрачнее.",
-                icon: Layers3,
-                tag: "ВЫДАЧА → ВОЗВРАТ",
+                icon: Focus,
+                title: "Make an informed call",
+                text: "Explore matching points, slide between aligned views and download the evidence for your review.",
+                label: "YOUR EXPERTISE. BETTER CONTEXT.",
               },
-            ].map((item) => (
-              <article className="solution-card reveal" key={item.number}>
-                <div>
-                  <span className="mono">/{item.number}</span>
-                  <item.icon size={24} strokeWidth={1.5} />
+            ].map((step, i) => (
+              <article className="process-card" key={step.title}>
+                <div className="process-card-top">
+                  <span className="mono">0{i + 1}</span>
+                  <step.icon size={27} strokeWidth={1.4} />
                 </div>
-                <h3>{item.title}</h3>
-                <p>{item.text}</p>
-                <span className="mono solution-tag">{item.tag}</span>
+                <h3>{step.title}</h3>
+                <p>{step.text}</p>
+                <span className="process-caption mono">{step.label}</span>
               </article>
             ))}
           </div>
         </section>
-
-        <section className="faq-section section-pad">
-          <div className="faq-heading reveal">
-            <span className="eyebrow">
-              <span className="tiny-cross">+</span> БЕЗ ЧЁРНОГО ЯЩИКА
-            </span>
+        <Workspace />
+        <section className="solutions section" id="solutions">
+          <div className="solutions-intro">
+            <span className="eyebrow">BUILT AROUND THE HANDOVER</span>
             <h2>
-              Хорошие вопросы.
+              Better context.
               <br />
-              <span className="serif">Честные ответы.</span>
+              <span>Better conversations.</span>
             </h2>
             <p>
-              Технологии можно доверять,
-              <br />
-              когда понятны её возможности.
+              A shared visual reference for the moments when the condition of a
+              vehicle matters.
             </p>
+            <a className="text-link" href="#workspace">
+              Bring your next inspection into focus <ArrowUpRight size={19} />
+            </a>
           </div>
-          <div className="faq-list reveal">
-            {faqs.map(([q, a], i) => (
-              <div className={`faq ${openFaq === i ? "expanded" : ""}`} key={q}>
-                <button
-                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                  aria-expanded={openFaq === i}
-                  aria-controls={`faq-${i}`}
-                >
-                  <span>{q}</span>
-                  {openFaq === i ? <Minus size={20} /> : <Plus size={20} />}
-                </button>
-                <div id={`faq-${i}`} hidden={openFaq !== i}>
-                  <p>{a}</p>
+          <div className="solution-list">
+            {[
+              [
+                "01",
+                "Dealerships & service teams",
+                "Compare intake and collection photos. Give your team a clearer starting point for discussing changes.",
+                "CHECK-IN → HANDOVER",
+              ],
+              [
+                "02",
+                "Trade-in & vehicle buyers",
+                "Review the same details between appraisal and collection, with the visual evidence side by side.",
+                "APPRAISAL → COLLECTION",
+              ],
+              [
+                "03",
+                "Fleets & rental teams",
+                "Bring before-and-after photos together when reviewing a vehicle return.",
+                "PICKUP → RETURN",
+              ],
+            ].map(([n, title, text, tag]) => (
+              <article key={n}>
+                <span className="mono solution-number">{n}</span>
+                <div>
+                  <h3>{title}</h3>
+                  <p>{text}</p>
+                  <span className="mono">{tag}</span>
                 </div>
-              </div>
+                <ArrowUpRight size={22} />
+              </article>
             ))}
           </div>
         </section>
-        <section className="final-cta section-pad">
-          <div className="cta-fingerprint">
-            <Fingerprint size={370} strokeWidth={0.5} />
-          </div>
-          <div className="reveal">
-            <span className="eyebrow dark-eyebrow">
-              SEE THE DETAILS. KNOW THE STORY.
-            </span>
+        <section className="section faq-section" id="faq">
+          <div>
+            <span className="eyebrow">CLEAR EXPECTATIONS</span>
             <h2>
-              Посмотрите на автомобиль
+              Good questions.
               <br />
-              <span className="serif">внимательнее.</span>
+              <span className="muted">Straight answers.</span>
             </h2>
-            <a href="#workspace" className="button button-dark">
-              Начать первую проверку <ArrowUpRight size={21} />
-            </a>
+            <p>
+              A useful tool starts with knowing
+              <br />
+              what it can — and cannot — do.
+            </p>
           </div>
-          <span className="cta-corner">
-            <ArrowUpRight size={56} strokeWidth={1} />
-          </span>
+          <div className="faq-list">
+            {faqs.map(([q, a]) => (
+              <details className="faq" key={q}>
+                <summary>
+                  {q}
+                  <Plus size={18} />
+                </summary>
+                <p>{a}</p>
+              </details>
+            ))}
+          </div>
+        </section>
+        <section className="closing">
+          <div>
+            <span className="eyebrow">START WITH WHAT YOU CAN SEE</span>
+            <h2>Take a closer look.</h2>
+            <p>Your next comparison is two photos away.</p>
+          </div>
+          <a className="button button-dark" href="#workspace">
+            Open the comparison studio <ArrowUpRight size={19} />
+          </a>
         </section>
       </main>
       <footer className="footer">
-        <div className="footer-top">
-          <Brand footer />
-          <p>Каждая деталь рассказывает историю.</p>
-          <a href="#top">
-            Наверх <ArrowRight size={17} className="up-arrow" />
-          </a>
+        <div>
+          <Brand />
+          <p>Every detail has a story.</p>
         </div>
-        <div className="footer-bottom">
-          <span>
-            © {new Date().getFullYear()} CarPrint. Verification intelligence.
-          </span>
-          <span>Прототип · Partner Product</span>
-          <a href="#workspace">
-            Создано, чтобы видеть больше <ChevronRight size={14} />
+        <div>
+          <span>© {new Date().getFullYear()} CarPrint</span>
+          <span>Prototype · Expert review required</span>
+          <a href="#top">
+            Back to top <ArrowUpRight size={15} />
           </a>
         </div>
       </footer>
