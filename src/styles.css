@@ -185,12 +185,26 @@ h2 {
   top: 15px;
 }
 .header {
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: 20;
-  background: rgba(247, 248, 244, 0.96);
-  border-bottom: 1px solid var(--line);
-  backdrop-filter: blur(16px);
+  color: #fff;
+  background: transparent;
+  border-bottom: 1px solid transparent;
+  transition: background 0.2s, border-color 0.2s;
+}
+.header.header-glass {
+  background: rgba(15, 24, 17, 0.82);
+  border-bottom-color: #ffffff18;
+  backdrop-filter: blur(14px);
+}
+.header .brand-period {
+  color: var(--lime);
+}
+.header .icon-button:hover {
+  background: #ffffff18;
 }
 .header-inner {
   height: 83px;
@@ -223,15 +237,15 @@ h2 {
 .navigation a {
   font-size: 11px;
   font-weight: 600;
-  color: #62685d;
+  color: #e2e8dd;
 }
 .navigation a:hover {
-  color: #161d11;
+  color: var(--lime);
 }
 .header-cta {
   font-size: 11px;
   font-weight: 700;
-  border: 1px solid #bfc8b3;
+  border: 1px solid #ffffff50;
   border-radius: 5px;
   padding: 11px 15px;
   display: flex;
@@ -1298,8 +1312,8 @@ h2 {
     left: 0;
     right: 0;
     padding: 20px 24px;
-    background: #f7f8f4;
-    border-bottom: 1px solid var(--line);
+    background: rgba(15, 24, 17, 0.96);
+    border-bottom: 1px solid #ffffff18;
   }
   .navigation.open {
     display: flex;
