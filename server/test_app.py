@@ -90,3 +90,28 @@ def test_disclosed_example_is_processed_by_real_pipeline():
 def test_health_and_unknown_example():
     assert client.get('/api/health').json()['status'] == 'ok'
     assert client.get('/api/example/unknown').status_code == 404
+
+
+def test_presets_list_and_scenario_images():
+    response = client.get('/api/presets')
+    assert response.status_code == 200
+    presets = response.json()
+    assert len(presets) >= 4
+    preset_ids = [p['id'] for p in presets]
+    assert 'service-intake' in preset_ids
+    assert 'cobalt-negative' in preset_ids
+
+    # Test fetching preset images
+    ref = client.get('/api/presets/service-intake/reference')
+    cur = client.get('/api/presets/service-intake/current')
+    assert ref.status_code == 200 and cur.status_code == 200
+    assert ref.headers['content-type'] == 'image/jpeg'
+
+    # Run analysis on the service-intake preset
+    result = pair(ref.content, cur.content).json()
+    assert result['geometry'] == 'MATCHED'
+    assert 'quality_gate' in result
+    assert result['quality_gate']['overall'] in ('PASS', 'WARNING')
+    assert 'distinctiveness' in result
+    assert 'damage_timeline' in result
+

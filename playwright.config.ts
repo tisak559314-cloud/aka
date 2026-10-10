@@ -1,4 +1,9 @@
 import { defineConfig } from "@playwright/test";
+import { existsSync } from "node:fs";
+
+const edgePath = "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";
+const defaultWinPath = existsSync(edgePath) ? edgePath : undefined;
+
 export default defineConfig({
   testDir: "./tests",
   fullyParallel: false,
@@ -10,7 +15,7 @@ export default defineConfig({
     launchOptions: {
       executablePath:
         process.env.CHROMIUM_PATH ||
-        (process.platform === "linux" ? "/usr/bin/chromium" : undefined),
+        (process.platform === "linux" ? "/usr/bin/chromium" : defaultWinPath),
       args: ["--no-sandbox"],
     },
   },
