@@ -635,7 +635,13 @@ const faqs = [
 
 export default function App() {
   const [menu, setMenu] = useState(false);
+  const [scrolled, setScrolled] = useState(() => window.scrollY > 32);
   const menuButton = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 32);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape" && menu) {
@@ -652,7 +658,7 @@ export default function App() {
       <a className="skip-link" href="#workspace">
         Skip to comparison
       </a>
-      <header className="header">
+      <header className={`header${scrolled || menu ? " header-glass" : ""}`}>
         <div className="header-inner">
           <Brand />
           <nav
