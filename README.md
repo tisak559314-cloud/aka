@@ -71,7 +71,7 @@ The suite covers successful and insufficient alignment, identical/unrelated imag
 
 ## Deployment
 
-`vercel.json` keeps the Vite frontend and registers `api/index.py` as the FastAPI ASGI entrypoint. `requirements.txt` includes the existing Python runtime dependencies. API paths are routed to that function; the seven client routes rewrite to the frontend index. Large frontend-only assets and development files are excluded from the Python bundle. The generated marketing illustration is not included in the processing backend; the separate synthetic example asset is included.
+`vercel.json` keeps the Vite frontend and registers `api/index.py` as the FastAPI ASGI entrypoint. The root `requirements.txt` lists the runtime dependencies directly for the Vercel dependency parser; keep it synchronized with `server/requirements.txt`. API paths are routed to that function; the seven client routes rewrite to the frontend index. Large frontend-only assets and development files are excluded from the Python bundle. The generated marketing illustration is not included in the processing backend; the separate synthetic example asset is included.
 
 For a single-container deployment:
 
