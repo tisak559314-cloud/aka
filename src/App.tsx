@@ -929,6 +929,14 @@ function Workspace({
               )}
               {loadingPreset === "synthetic" ? "Loading sample…" : "Try a sample"}
             </button>
+            <a
+              className="text-button hf-test-button"
+              href="https://azamaka-carprint-demo.hf.space/"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Test on Hugging Face <ArrowUpRight size={15} />
+            </a>
             {count > 0 && (
               <button
                 className="text-button reset-button"

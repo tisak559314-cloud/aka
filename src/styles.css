@@ -5969,3 +5969,12 @@ code {
 }
 
 
+
+.hf-test-button {
+  background: var(--lime);
+  color: var(--ink);
+  border-radius: 6px;
+  padding: 8px 12px;
+  text-decoration: none;
+  font-weight: 600;
+}
