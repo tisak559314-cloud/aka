@@ -90,3 +90,25 @@ def test_disclosed_example_is_processed_by_real_pipeline():
 def test_health_and_unknown_example():
     assert client.get('/api/health').json()['status'] == 'ok'
     assert client.get('/api/example/unknown').status_code == 404
+
+
+def test_inspection_quality_and_integrity_are_computed_from_upload():
+    import hashlib
+    raw = encoded(texture())
+    result = client.post('/api/inspect', files={'photo': ('detail.png', raw, 'image/png')})
+    assert result.status_code == 200
+    body = result.json()
+    assert body['status'] == 'READY'
+    assert body['sha256'] == hashlib.sha256(raw).hexdigest()
+    assert body['keypoints'] > 30
+    assert body['quality']['width'] == 640
+    assert 'damage' not in body
+
+
+def test_inspection_blank_photo_requests_retake_and_invalid_input_rejected():
+    blank = encoded(np.zeros((256, 256, 3), dtype=np.uint8))
+    result = client.post('/api/inspect', files={'photo': ('blank.png', blank, 'image/png')}).json()
+    assert result['status'] == 'RETAKE'
+    assert len(result['warnings']) == 3
+    assert result['keypoints'] == 0
+    assert client.post('/api/inspect', files={'photo': ('bad.png', b'not an image', 'image/png')}).status_code == 415
