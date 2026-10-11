@@ -163,7 +163,7 @@ def inspect(photo: UploadFile = File(...)):
 def example(view: str):
     if view not in ('reference', 'current'):
         raise HTTPException(404, 'Photo not found.')
-    image = cv2.imread(str(ROOT / 'public/images/car-studio.png'))
+    image = cv2.imread(str(ROOT / 'server/assets/car-studio.png'))
     if image is None:
         raise HTTPException(503, 'Sample images are unavailable.')
     # Synthetic, disclosed pair; never presented as independently captured vehicle data.

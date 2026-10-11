@@ -1,12 +1,16 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "vite",
+  "fluid": true,
+  "build": {
+    "env": { "VERCEL_SUPPORT_LARGE_FUNCTIONS": "1" }
+  },
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "functions": {
     "api/index.py": {
       "maxDuration": 60,
-      "excludeFiles": "{node_modules/**,.venv/**,tests/**,test-results/**,public/videos/**,public/images/cobalt-inspection.png,dist/**,.git/**}"
+      "excludeFiles": "{node_modules/**,.venv/**,tests/**,test-results/**,public/**,dist/**,src/**,.git/**,server/test_*.py}"
     }
   },
   "rewrites": [

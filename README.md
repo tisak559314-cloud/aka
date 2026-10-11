@@ -71,7 +71,9 @@ The suite covers successful and insufficient alignment, identical/unrelated imag
 
 ## Deployment
 
-`vercel.json` keeps the Vite frontend and registers `api/index.py` as the FastAPI ASGI entrypoint. The root `requirements.txt` lists the runtime dependencies directly for the Vercel dependency parser; keep it synchronized with `server/requirements.txt`. API paths are routed to that function; the seven client routes rewrite to the frontend index. Large frontend-only assets and development files are excluded from the Python bundle. The generated marketing illustration is not included in the processing backend; the separate synthetic example asset is included.
+`vercel.json` keeps the Vite frontend and registers `api/index.py` as the FastAPI ASGI entrypoint. The root `requirements.txt` lists the runtime dependencies directly for the Vercel dependency parser; keep it synchronized with `server/requirements.txt`. API paths are routed to that function; the seven client routes rewrite to the frontend index. Frontend assets and development files are excluded from the Python bundle. The separate synthetic example asset lives in `server/assets` so it remains available inside the function.
+
+The OpenCV/NumPy bundle requires Vercel Fluid compute with large-function support. The non-secret build flag `VERCEL_SUPPORT_LARGE_FUNCTIONS=1` is tracked in `vercel.json` so previews and production use the same configuration. The function keeps its 60-second request limit. See [Vercel function bundle limits](https://vercel.com/docs/functions/limitations#large-functions-beta).
 
 For a single-container deployment:
 
@@ -87,7 +89,7 @@ FastAPI serves the built frontend and its direct page routes in the container. N
 - React, Vite, FastAPI: MIT licences.
 - OpenCV 4: Apache 2.0; NumPy: BSD 3-Clause. See installed distributions for full notices.
 - Lucide: ISC. Manrope and IBM Plex Mono: SIL Open Font License.
-- `public/images/car-studio.png`: existing AI-generated concept image, used to create the disclosed synthetic alignment pair. The second image is an affine/brightness transformation, not an independent inspection.
+- `server/assets/car-studio.png`: existing AI-generated concept image, used to create the disclosed synthetic alignment pair. The second image is an affine/brightness transformation, not an independent inspection.
 - `public/images/cobalt-inspection.png`: generated with built-in ImageGen for this redesign. Marketing illustration only. Prompt: “A photorealistic white Chevrolet Cobalt sedan in a dark graphite vehicle inspection bay at a logistics terminal. Three-quarter front view, entire vehicle and wheels clearly visible. Crisp pale bodywork, subtle teal strip lights, realistic industrial environment and soft floor reflection. No people, text, UI labels, licence number or damage.”
 - `public/videos/hero-sequence.mp4`: user-supplied `0.MOV`, followed by `1.MOV`; silent H.264, 24 fps, 10.083 seconds, native loop. Labelled **Concept film**. A poster and manual playback support reduced-motion preferences.
 
