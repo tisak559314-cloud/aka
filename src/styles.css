@@ -3595,3 +3595,237 @@ h2 {
   }
 }
 
+
+/* CarPrint AI (HF Space Azamaka/carprint-demo) results */
+.ai-panel {
+  margin: 0 0 22px;
+  padding: 24px 28px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--lime);
+  border-radius: 8px;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.ai-panel .eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 9px;
+  color: #6d8056;
+}
+.ai-pending,
+.ai-failed {
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  color: #4b5547;
+}
+.ai-failed {
+  border-left-color: #e0b44c;
+  background: #fffaf0;
+}
+.ai-failed a {
+  color: inherit;
+  text-decoration: underline;
+}
+.ai-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.ai-head h3 {
+  margin: 8px 0 0;
+  font-size: 24px;
+  letter-spacing: -0.5px;
+}
+.ai-verdict-same .ai-head h3 {
+  color: #2f6a1e;
+}
+.ai-verdict-different .ai-head h3 {
+  color: #a3203a;
+}
+.ai-verdict-review .ai-head h3,
+.ai-verdict-recapture .ai-head h3 {
+  color: #816221;
+}
+.ai-device {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border-radius: 5px;
+  background: #eef2e7;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.ai-metrics {
+  margin: 0;
+}
+.ai-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: 22px;
+  align-items: start;
+}
+.ai-side {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+}
+.ai-image {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+}
+.ai-figure {
+  margin: 0;
+}
+.ai-figure figcaption {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #69795a;
+}
+.ai-findings,
+.ai-cost ul,
+.ai-reasons {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.ai-findings li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+.ai-findings em {
+  font-style: normal;
+  color: #816221;
+}
+.ai-reasons li {
+  padding: 4px 0 4px 14px;
+  position: relative;
+  font-size: 13px;
+  color: #4b5547;
+}
+.ai-reasons li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 11px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--lime);
+  box-shadow: 0 0 0 1px #9bb85a;
+}
+.ai-cost {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+  border-radius: 6px;
+  background: #f7f8f4;
+}
+.ai-cost strong {
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -1px;
+}
+.ai-cost > span,
+.ai-cost small {
+  font-size: 12px;
+  color: #69795a;
+}
+.ai-cost li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 10px;
+  padding: 6px 0;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+}
+.hf-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+  color: inherit;
+}
+.hf-cta {
+  background: var(--lime) !important;
+  color: var(--ink) !important;
+}
+@media (max-width: 760px) {
+  .ai-panel {
+    padding: 18px;
+  }
+  .ai-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ai-metrics {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.ai-scan-lab {
+  padding: 24px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.ai-scan-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+.ai-upload {
+  cursor: pointer;
+}
+.ai-upload.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+.ai-samples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.ai-sample {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px 5px 5px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  font-size: 12px;
+  cursor: pointer;
+}
+.ai-sample:hover:not(:disabled) {
+  border-color: var(--ink);
+}
+.ai-sample img {
+  width: 56px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+.ai-preview {
+  max-width: 360px;
+  width: 100%;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+}

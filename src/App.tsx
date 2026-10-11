@@ -4,6 +4,8 @@ import PartAtlas from "./PartAtlas";
 import AuditCertificateModal, { type AuditCertificateData } from "./AuditCertificateModal";
 import DamageTimelineView from "./DamageTimelineView";
 import ProtocolGuide from "./ProtocolGuide";
+import { AiComparePanel, DamageScanner, HfDemoLink, runCompare, useAi } from "./CarprintAI";
+import type { CompareResult } from "./carprintApi";
 import { CostCard } from "./components/CostCard";
 import { MatchView } from "./components/MatchView";
 import { PipelineFilm } from "./components/PipelineFilm";
@@ -499,6 +501,7 @@ function Workspace() {
   const [showCertificate, setShowCertificate] = useState(false);
   const resultRef = useRef<HTMLDivElement>(null);
   const requestRef = useRef<AbortController | null>(null);
+  const ai = useAi<CompareResult>();
   const locked = busy || loadingPreset !== null;
   const count = photos.filter(Boolean).length;
 
@@ -525,6 +528,7 @@ function Workspace() {
     setResult(null);
     setIsExample(false);
     setActivePresetNotice(null);
+    ai.reset();
     const next: [Photo | null, Photo | null] = [...photos];
     if (next[index]) URL.revokeObjectURL(next[index]!.url);
     next[index] = file ? { file, url: URL.createObjectURL(file) } : null;
@@ -538,12 +542,14 @@ function Workspace() {
     setError("");
     setIsExample(false);
     setActivePresetNotice(null);
+    ai.reset();
   }
 
   async function loadPreset(presetId: string, partId: string) {
     setLoadingPreset(presetId);
     setError("");
     setResult(null);
+    ai.reset();
     setSelectedPart(partId);
     const controller = new AbortController();
     requestRef.current = controller;
@@ -589,6 +595,7 @@ function Workspace() {
     setLoadingPreset("synthetic");
     setError("");
     setResult(null);
+    ai.reset();
     setSelectedPart("general");
     const controller = new AbortController();
     requestRef.current = controller;
@@ -637,6 +644,7 @@ function Workspace() {
     data.append("reference", photos[0].file);
     data.append("current", photos[1].file);
     data.append("part_id", selectedPart);
+    ai.run(runCompare(photos[0].file, photos[1].file));
     try {
       const res = await fetch("/api/compare", {
         method: "POST",
@@ -889,6 +897,7 @@ function Workspace() {
           tabIndex={-1}
           aria-label="Comparison results"
         >
+          <AiComparePanel state={ai.state} />
           {result && (
             <Comparison
               result={result}
@@ -903,7 +912,8 @@ function Workspace() {
           <ShieldCheck size={15} /> No permanent photo storage
         </span>
         <span>Geometric comparison · Human review required</span>
-        <span className="mono">SIFT + RANSAC · PART ATLAS</span>
+        <span className="mono">CARPRINT AI ON HF GPU · SIFT BASELINE</span>
+        <HfDemoLink />
       </div>
 
       {showCertificate && result && (
@@ -1025,6 +1035,9 @@ export default function App() {
             <a href="#evidence" onClick={() => setMenu(false)}>
               Vector Evidence
             </a>
+            <a href="#ai-damage" onClick={() => setMenu(false)}>
+              AI Damage Scan
+            </a>
             <a href="#estimate" onClick={() => setMenu(false)}>
               Cost Estimate
             </a>
@@ -1053,6 +1066,7 @@ export default function App() {
             >
               🌐 {lang === "en" ? "RU" : "EN"}
             </button>
+            <HfDemoLink className="header-cta hf-cta" />
             <a className="header-cta" href="#workspace">
               Open studio <ArrowUpRight size={17} />
             </a>
@@ -1191,6 +1205,7 @@ export default function App() {
 
         {/* The Core Interactive Workspace */}
         <Workspace />
+        <DamageScanner />
 
         {/* Vector SVG Evidence Verification */}
         <section className="section">

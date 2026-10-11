@@ -18,6 +18,8 @@ import {
   Play,
   ChevronDown,
 } from "lucide-react";
+import { AiComparePanel, HfDemoLink, runCompare, useAi } from "./CarprintAI";
+import type { CompareResult } from "./carprintApi";
 
 export type Result = {
   decision: string;
@@ -295,6 +297,7 @@ export default function Workspace({
   const [guide, setGuide] = useState(false);
   const resultRef = useRef<HTMLDivElement>(null);
   const requestRef = useRef<AbortController | null>(null);
+  const ai = useAi<CompareResult>();
   const locked = busy || loadingExample;
   const count = photos.filter(Boolean).length;
   useEffect(() => {
@@ -325,6 +328,7 @@ export default function Workspace({
     setError("");
     setResult(null);
     setIsExample(false);
+    ai.reset();
     const next: [Photo | null, Photo | null] = [...photos];
     if (next[index]) URL.revokeObjectURL(next[index]!.url);
     next[index] = file ? { file, url: URL.createObjectURL(file) } : null;
@@ -336,11 +340,13 @@ export default function Workspace({
     setResult(null);
     setError("");
     setIsExample(false);
+    ai.reset();
   }
   async function example() {
     setLoadingExample(true);
     setError("");
     setResult(null);
+    ai.reset();
     const controller = new AbortController();
     requestRef.current = controller;
     const timeout = setTimeout(() => controller.abort(), 30000);
@@ -385,6 +391,7 @@ export default function Workspace({
     const data = new FormData();
     data.append("reference", photos[0].file);
     data.append("current", photos[1].file);
+    ai.run(runCompare(photos[0].file, photos[1].file));
     try {
       const res = await fetch("/api/compare", {
         method: "POST",
@@ -596,6 +603,7 @@ export default function Workspace({
           tabIndex={-1}
           aria-label="Comparison results"
         >
+          <AiComparePanel state={ai.state} />
           {result && <Comparison result={result} />}
         </div>
       </div>
@@ -604,7 +612,8 @@ export default function Workspace({
           <ShieldCheck size={15} /> Photos processed without server storage
         </span>
         <span>Geometric comparison · Human review required</span>
-        <span className="mono">SIFT + RANSAC</span>
+        <span className="mono">CarPrint AI on HF GPU · SIFT baseline</span>
+        <HfDemoLink />
       </div>
     </section>
   );

@@ -18,6 +18,8 @@ import {
   Activity,
 } from "lucide-react";
 import Workspace, { Comparison } from "./ComparisonWorkspace";
+import { AiDamagePanel, runDamage, useAi } from "./CarprintAI";
+import type { DamageResult } from "./carprintApi";
 import { checkpoints, dateLabel, downloadJson } from "./data";
 import type {
   Inspection,
@@ -144,6 +146,7 @@ export function Scanner({
     camera = useRef<HTMLInputElement>(null),
     form = useRef<HTMLFormElement>(null),
     request = useRef<AbortController | null>(null);
+  const ai = useAi<DamageResult>();
   const [vehicle, setVehicle] = useState(""),
     [checkpoint, setCheckpoint] = useState<Inspection["checkpoint"]>("Factory"),
     [inspector, setInspector] = useState(""),
@@ -170,6 +173,7 @@ export function Scanner({
     }
     setFile(f);
     setResult(null);
+    ai.reset();
     setSaved(false);
     setError("");
   }
@@ -182,6 +186,7 @@ export function Scanner({
     const controller = new AbortController();
     request.current = controller;
     const timer = setTimeout(() => controller.abort(), 60000);
+    ai.run(runDamage([file]));
     try {
       const body = new FormData();
       body.append("photo", file);
@@ -421,6 +426,7 @@ export function Scanner({
           <ArrowRight size={17} />
         </button>
       </div>
+      <AiDamagePanel state={ai.state} />
       {result && (
         <section
           className="panel scanner-result"
@@ -450,6 +456,7 @@ export function Scanner({
                     setSaved(false);
                     setFile(null);
                     setResult(null);
+                    ai.reset();
                     setNotes("");
                     const i = checkpoints.indexOf(checkpoint);
                     setCheckpoint(checkpoints[Math.min(i + 1, 2)]);
