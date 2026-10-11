@@ -37,11 +37,9 @@ test("hero starts muted, plays both clips, loops and supports pause", async ({
   await expect(
     page.getByRole("button", { name: "Pause background video" }),
   ).toBeVisible();
-  await page
-    .getByRole("link", { name: "Compare your photos", exact: true })
-    .click();
+  await page.getByRole("link", { name: "Try live demo", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "Two photos. A clearer picture." }),
+    page.getByRole("heading", { name: "A better inspection starts here." }),
   ).toBeVisible();
 });
 
@@ -79,7 +77,7 @@ test("failed video retains the hero and its primary action", async ({
   await page.goto("/");
   await expect(page.locator(".hero-film video")).toHaveClass("failed");
   await expect(
-    page.getByRole("link", { name: "Compare your photos", exact: true }),
+    page.getByRole("link", { name: "Try live demo", exact: true }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: /background video/ }),
