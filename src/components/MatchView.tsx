@@ -1,4 +1,4 @@
-import { useState, useRef, useId, useMemo, type PointerEvent } from "react";
+import { useState, useEffect, useRef, useId, useMemo, type PointerEvent } from "react";
 import pairData from "../data/pair.json";
 import { CheckCircle2, Eye, Filter, ShieldCheck } from "lucide-react";
 
@@ -7,20 +7,30 @@ const GAP = 24;
 const INDIVIDUAL_W = 0.7;
 
 export function MatchView({ lang = "en" }: { lang?: "en" | "ru" }) {
+  const [data, setData] = useState(pairData);
   const [onlyMarks, setOnlyMarks] = useState(false);
   const [lens, setLens] = useState<{ x: number; y: number } | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const uid = useId().replace(/:/g, "");
 
-  const refSize = pairData.ref_size as [number, number];
-  const curSize = pairData.cur_size as [number, number];
+  useEffect(() => {
+    fetch("/api/evidence/pair")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((d) => {
+        if (d && d.matches) setData(d);
+      })
+      .catch(() => {});
+  }, []);
+
+  const refSize = data.ref_size as [number, number];
+  const curSize = data.cur_size as [number, number];
   const w1 = (H * refSize[0]) / refSize[1];
   const w2 = (H * curSize[0]) / curSize[1];
 
   const lines = useMemo(() => {
-    const rows = pairData.matches.filter((m) => !onlyMarks || m[4] >= INDIVIDUAL_W);
+    const rows = data.matches.filter((m) => !onlyMarks || m[4] >= INDIVIDUAL_W);
     return [...rows].sort((a, b) => a[4] - b[4]);
-  }, [onlyMarks]);
+  }, [data, onlyMarks]);
 
   const onPointerMove = (e: PointerEvent<SVGSVGElement>) => {
     const svg = svgRef.current;
@@ -31,7 +41,7 @@ export function MatchView({ lang = "en" }: { lang?: "en" | "ru" }) {
     setLens({ x: p.x, y: p.y });
   };
 
-  const s = pairData.stats;
+  const s = data.stats;
 
   return (
     <div className="matchview-section" id="evidence">

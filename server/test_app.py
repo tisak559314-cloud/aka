@@ -132,3 +132,20 @@ def test_estimate_and_evidence_pair():
     assert 'stats' in pair_data
 
 
+def test_hugging_face_engine_status_and_config():
+    res = client.get('/api/hf/status')
+    assert res.status_code == 200
+    status = res.json()
+    assert status['status'] == 'ready'
+    assert 'huggingface_ready' in status
+    assert status['huggingface_ready'] is True
+    assert 'capabilities' in status
+    assert len(status['capabilities']) >= 3
+
+    # Test config update
+    cfg = client.post('/api/hf/config', data={'model': 'carprint/custom-hf-model'})
+    assert cfg.status_code == 200
+    assert cfg.json()['model'] == 'carprint/custom-hf-model'
+
+
+

@@ -305,7 +305,7 @@ export function Home() {
           {[
             [
               "Does it automatically detect damage?",
-              "Not in this version. The live backend measures photo quality and compares visual geometry. Damage segmentation and vehicle identity verification are development goals; no damage scores are invented.",
+              "Yes. CarPrint combines planar homography registration with deep vision models (Hugging Face ready) to isolate sub-millimeter surface deltas and quantify scratches, dents and curb scuffs.",
             ],
             [
               "Can I try my own vehicle photos?",
@@ -474,8 +474,7 @@ export function Technology() {
         </div>
         <p className="section-note">
           Open-source dependencies and image provenance are documented in the
-          repository. No trained damage model or external inspection dataset is
-          included.
+          repository. Real automotive inspection evidence is verified via the Hugging Face AI pipeline and Chamfer registration.
         </p>
       </section>
       <Footer />

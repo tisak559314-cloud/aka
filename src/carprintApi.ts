@@ -70,7 +70,7 @@ function connect(): Promise<Client> {
       throw e;
     });
   }
-  return client;
+  return client!;
 }
 
 /** Gradio rejects with a status object, not an Error. */

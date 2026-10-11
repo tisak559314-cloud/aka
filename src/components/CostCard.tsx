@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import sampleCostData from "../data/sample_cost.json";
 import { ShieldAlert, Wrench } from "lucide-react";
 
@@ -59,14 +59,37 @@ export function formatMoney(val: number, currency: "UZS" | "USD", lang: "en" | "
 }
 
 export function CostCard({
-  data = sampleCostData as unknown as CostData,
+  data: initialData = sampleCostData as unknown as CostData,
   lang = "en",
+  selectedPartKey,
+  detectedDamages = 0,
 }: {
   data?: CostData;
   lang?: "en" | "ru";
+  selectedPartKey?: string;
+  detectedDamages?: number;
 }) {
+  const [data, setData] = useState<CostData>(initialData);
   const [currency, setCurrency] = useState<"UZS" | "USD">("UZS");
-  const [selectedPart, setSelectedPart] = useState<string | null>(null);
+  const [selectedPart, setSelectedPart] = useState<string | null>(selectedPartKey || null);
+
+  useEffect(() => {
+    if (selectedPartKey) {
+      setSelectedPart(selectedPartKey);
+    }
+  }, [selectedPartKey]);
+
+  useEffect(() => {
+    const q = selectedPartKey ? `?part_id=${encodeURIComponent(selectedPartKey)}` : "";
+    fetch(`/api/estimate${q}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((live) => {
+        if (live && live.parts) {
+          setData(live);
+        }
+      })
+      .catch(() => {});
+  }, [selectedPartKey]);
 
   const top = Math.max(data.p90 * 1.15, 1);
   const leftPct = (data.p10 / top) * 100;
@@ -101,6 +124,16 @@ export function CostCard({
               ? "Оценка рассчитывается по открытым тарифам и прайс-листам Ташкента. Модель показывает честный диапазон P10–P90 вместо обманчивой единственной цифры."
               : "Calibrated against Tashkent OEM dealer pricing and labor rates. Outputs an empirical P10–P90 spread instead of an over-confident single estimate."}
           </p>
+          {detectedDamages > 0 && (
+            <div className="cost-live-badge mono">
+              <span className="live-dot" />
+              <span>
+                {lang === "ru"
+                  ? `В текущей проверке выявлено дефектов: ${detectedDamages}`
+                  : `Active inspection detected anomalies: ${detectedDamages}`}
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="currency-toggle-group">

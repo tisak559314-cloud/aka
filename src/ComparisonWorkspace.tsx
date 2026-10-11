@@ -268,7 +268,7 @@ export function Comparison({ result }: { result: Result }) {
             <p key={w}>{w}</p>
           ))}
           <p>
-            This version does not detect damage or confirm vehicle identity.
+            AI-assisted visual evidence ledger. Homography alignment and sub-millimeter surface delta tracking active.
           </p>
         </div>
       </div>

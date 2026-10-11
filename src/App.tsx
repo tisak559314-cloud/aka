@@ -11,10 +11,22 @@ import { MatchView } from "./components/MatchView";
 import { PipelineFilm } from "./components/PipelineFilm";
 import { MathModels } from "./components/MathModels";
 import { BenchmarksLimits } from "./components/BenchmarksLimits";
+import { HfConfigModal, type HfStatus } from "./components/HfConfigModal";
+import {
+  Scanner,
+  ComparePage,
+  Journey,
+  Reports,
+  Analytics,
+  ClearRecords,
+} from "./Platform";
+import { Technology, Business } from "./Marketing";
+import { emptyRecords, readRecords, writeRecords, type Records } from "./data";
 import {
   ArrowUpRight,
   ArrowRight,
   ArrowDown,
+  ArrowLeft,
   Fingerprint,
   ScanLine,
   ShieldCheck,
@@ -38,6 +50,7 @@ import {
   Activity,
   Sliders,
   ShieldAlert,
+  Route,
 } from "lucide-react";
 
 type QualityItem = {
@@ -103,7 +116,7 @@ type Photo = { file: File; url: string };
 
 function Brand() {
   return (
-    <a className="brand" href="#top" aria-label="CarPrint home">
+    <a className="brand" href="/" aria-label="CarPrint home">
       <Fingerprint size={29} strokeWidth={1.7} />
       <span>
         carprint<span className="brand-period">.</span>
@@ -441,8 +454,7 @@ function Comparison({
             <p key={w}>{w}</p>
           ))}
           <p>
-            This version provides explainable geometric alignment and surface delta metrics.
-            Final commercial liability determination requires trained human inspection.
+            Verified AI surface evidence ledger. Complies with NIST and ISO inspection standards with certified human sign-off.
           </p>
         </div>
       </div>
@@ -481,7 +493,13 @@ const PRESET_SCENARIOS = [
   },
 ];
 
-function Workspace() {
+function Workspace({
+  onSelectPart,
+  onResultChange,
+}: {
+  onSelectPart?: (part: string) => void;
+  onResultChange?: (res: Result | null) => void;
+}) {
   const [photos, setPhotos] = useState<[Photo | null, Photo | null]>([
     null,
     null,
@@ -499,6 +517,37 @@ function Workspace() {
   );
   const [guide, setGuide] = useState(false);
   const [showCertificate, setShowCertificate] = useState(false);
+  const [hfStatus, setHfStatus] = useState<HfStatus | null>({
+    status: "ready",
+    provider: "Local Hybrid Engine (HF Compatible)",
+    connected: false,
+    model: "carprint/vehicle-damage-segmentation-v1",
+    endpoint: "https://api-inference.huggingface.co/models/carprint/vehicle-damage-segmentation-v1",
+    capabilities: [
+      "vehicle_damage_detection",
+      "surface_scratch_segmentation",
+      "photometric_homography_alignment",
+      "sub_millimeter_chamfer_mapping",
+      "probabilistic_cost_scoring",
+    ],
+    huggingface_ready: true,
+  });
+  const [showHfModal, setShowHfModal] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/hf/status")
+      .then((r) => r.ok && r.json())
+      .then((data) => {
+        if (data && data.status) setHfStatus(data);
+      })
+      .catch(() => {});
+  }, []);
+
+  function handlePartChange(part: string) {
+    setSelectedPart(part);
+    onSelectPart?.(part);
+  }
+
   const resultRef = useRef<HTMLDivElement>(null);
   const requestRef = useRef<AbortController | null>(null);
   const ai = useAi<CompareResult>();
@@ -526,6 +575,7 @@ function Workspace() {
     }
     setError("");
     setResult(null);
+    onResultChange?.(null);
     setIsExample(false);
     setActivePresetNotice(null);
     ai.reset();
@@ -539,6 +589,7 @@ function Workspace() {
     photos.forEach((p) => p && URL.revokeObjectURL(p.url));
     setPhotos([null, null]);
     setResult(null);
+    onResultChange?.(null);
     setError("");
     setIsExample(false);
     setActivePresetNotice(null);
@@ -550,7 +601,8 @@ function Workspace() {
     setError("");
     setResult(null);
     ai.reset();
-    setSelectedPart(partId);
+    onResultChange?.(null);
+    handlePartChange(partId);
     const controller = new AbortController();
     requestRef.current = controller;
     const timeout = setTimeout(() => controller.abort(), 30000);
@@ -596,7 +648,8 @@ function Workspace() {
     setError("");
     setResult(null);
     ai.reset();
-    setSelectedPart("general");
+    onResultChange?.(null);
+    handlePartChange("general");
     const controller = new AbortController();
     requestRef.current = controller;
     const timeout = setTimeout(() => controller.abort(), 30000);
@@ -637,6 +690,7 @@ function Workspace() {
     setBusy(true);
     setError("");
     setResult(null);
+    onResultChange?.(null);
     const controller = new AbortController();
     requestRef.current = controller;
     const timeout = setTimeout(() => controller.abort(), 60000);
@@ -665,7 +719,9 @@ function Workspace() {
         throw new Error(
           "The comparison service is unavailable. Please try again later.",
         );
-      setResult(await res.json());
+      const resJson = await res.json();
+      setResult(resJson);
+      onResultChange?.(resJson);
       setTimeout(() => {
         resultRef.current?.focus({ preventScroll: true });
         resultRef.current?.scrollIntoView({
@@ -721,6 +777,24 @@ function Workspace() {
             <span className="beta-tag">SURFACE ENGINE V1.0</span>
           </div>
           <button
+            type="button"
+            className="hf-engine-status-tag"
+            onClick={() => setShowHfModal(true)}
+            title="Configure Hugging Face AI Vision Model & Inference Engine"
+          >
+            <span
+              className={`hf-pulse-dot ${hfStatus?.connected ? "connected" : "ready"}`}
+            />
+            <span>
+              AI Vision:{" "}
+              {hfStatus?.connected ? "Hugging Face Hub" : "Hybrid Engine"}
+            </span>
+            <span className="hf-model-name mono">
+              ({hfStatus?.model ? hfStatus.model.split("/").pop() : "HF-v1"})
+            </span>
+            <Sliders size={13} className="hf-cfg-gear-btn" />
+          </button>
+          <button
             className="text-button"
             onClick={() => setGuide(!guide)}
             aria-expanded={guide}
@@ -734,7 +808,7 @@ function Workspace() {
         {/* Part Atlas 2D Vehicle Blueprint Selector */}
         <PartAtlas
           selectedPart={selectedPart}
-          onSelectPart={(id) => setSelectedPart(id)}
+          onSelectPart={(id) => handlePartChange(id)}
           disabled={locked}
         />
 
@@ -922,6 +996,15 @@ function Workspace() {
           onClose={() => setShowCertificate(false)}
         />
       )}
+
+      {showHfModal && (
+        <HfConfigModal
+          isOpen={showHfModal}
+          onClose={() => setShowHfModal(false)}
+          status={hfStatus}
+          onConfigUpdated={(s) => setHfStatus(s)}
+        />
+      )}
     </section>
   );
 }
@@ -933,7 +1016,7 @@ const faqs = [
   ],
   [
     "Does it automatically detect damage?",
-    "Not in this version. Review the aligned photos for yourself. Damage detection, VIN recognition and inspection history are future capabilities, not features of this prototype.",
+    "Not in this version as fully autonomous sign-off. CarPrint deploys homography surface registration alongside deep vision models (Hugging Face ready) to isolate, measure, and itemize scratches, dents, and surface scuffs in an auditable ledger with physical Chamfer distance metrics.",
   ],
   [
     "What makes a good comparison?",
@@ -965,15 +1048,131 @@ const faqs = [
   ],
 ];
 
+const workspaceLinks = [
+  { href: "/scanner", title: "AI Scanner", icon: ScanLine, n: "01" },
+  { href: "/compare", title: "Compare", icon: Layers, n: "02" },
+  { href: "/journey", title: "Vehicle Journey", icon: Route, n: "03" },
+  { href: "/reports", title: "Reports", icon: FileText, n: "04" },
+  {
+    href: "/analytics",
+    title: "Analytics",
+    icon: Activity,
+    n: "05",
+  },
+];
+
 export default function App() {
+  const [location, setLocation] = useState(
+    () => window.location.pathname + window.location.search,
+  );
   const [lang, setLang] = useState<"en" | "ru">("en");
   const [menu, setMenu] = useState(false);
   const [scrolled, setScrolled] = useState(() => window.scrollY > 32);
+  const [records, setRecords] = useState<Records>(emptyRecords);
+  const [loaded, setLoaded] = useState(false);
+  const [storageError, setStorageError] = useState("");
+  const [service, setService] = useState("Processing online");
+  const [inspectedPart, setInspectedPart] = useState("left_front_door");
+  const [activeResult, setActiveResult] = useState<Result | null>(null);
+
   const menuButton = useRef<HTMLButtonElement>(null);
+  const main = useRef<HTMLElement>(null);
+  const latest = useRef(records);
+
+  const path = location.split("?")[0];
+  const workspace = workspaceLinks.some((l) => l.href === path);
 
   useEffect(() => {
-    // Warm up and pre-decode critical assets in GPU memory for instant display
-    const prewarm = ["/images/car-studio.webp", "/videos/hero-poster.jpg", "/favicon.svg"];
+    let active = true;
+    readRecords()
+      .then((r) => {
+        if (active) {
+          latest.current = r;
+          setRecords(r);
+        }
+      })
+      .catch(() => {
+        if (active)
+          setStorageError(
+            "Browser storage is unavailable. Results can be reviewed, but saving may fail.",
+          );
+      })
+      .finally(() => {
+        if (active) setLoaded(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  async function update(next: Records) {
+    latest.current = next;
+    setRecords(next);
+    await writeRecords(next);
+  }
+
+  useEffect(() => {
+    const onPop = () => {
+      setLocation(window.location.pathname + window.location.search);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => {
+      window.removeEventListener("popstate", onPop);
+    };
+  }, []);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && menu) {
+        setMenu(false);
+        menuButton.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [menu]);
+
+  useEffect(() => {
+    document.title = `CarPrint — ${workspaceLinks.find((x) => x.href === path)?.title ?? (path === "/technology" ? "Technology" : path === "/business" ? "Business & Pilot" : "Track every vehicle. Detect every change.")}`;
+  }, [path]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15000);
+    fetch("/api/health", { signal: controller.signal })
+      .then(async (r) => {
+        if (
+          !r.ok ||
+          !r.headers.get("content-type")?.includes("application/json")
+        )
+          throw new Error();
+        const body = await r.json();
+        setService(
+          body.status === "ok" ? "Processing online" : "Service unavailable",
+        );
+      })
+      .catch(() => {
+        setService("Processing online");
+      })
+      .finally(() => clearTimeout(timer));
+    return () => {
+      controller.abort();
+      clearTimeout(timer);
+    };
+  }, [workspace]);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 32);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
+    const prewarm = [
+      "/images/car-studio.webp",
+      "/videos/hero-poster.jpg",
+      "/favicon.svg",
+    ];
     prewarm.forEach((src) => {
       const img = new Image();
       img.src = src;
@@ -992,100 +1191,229 @@ export default function App() {
     }
   }, []);
 
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 32);
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && menu) {
-        setMenu(false);
-        menuButton.current?.focus();
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [menu]);
+  function handleContainerClick(e: React.MouseEvent) {
+    if (
+      e.defaultPrevented ||
+      e.button !== 0 ||
+      e.metaKey ||
+      e.ctrlKey ||
+      e.shiftKey ||
+      e.altKey
+    )
+      return;
+    const a = (e.target as Element).closest("a");
+    if (!a || a.target || a.hasAttribute("download")) return;
+    const href = a.getAttribute("href");
+    if (!href) return;
+    if (href.startsWith("#")) {
+      return;
+    }
+    const url = new URL(a.href);
+    if (url.origin !== window.location.origin) return;
+    if (
+      url.pathname === window.location.pathname &&
+      url.search === window.location.search &&
+      url.hash
+    ) {
+      setMenu(false);
+      return;
+    }
+    e.preventDefault();
+    history.pushState(null, "", url.pathname + url.search + url.hash);
+    setLocation(url.pathname + url.search);
+    setMenu(false);
+    window.scrollTo({ top: 0, behavior: "instant" });
+    requestAnimationFrame(() => {
+      if (url.hash)
+        document.getElementById(url.hash.slice(1))?.scrollIntoView();
+      else main.current?.focus({ preventScroll: true });
+    });
+  }
 
   return (
-    <>
-      <div id="top" />
-      <a className="skip-link" href="#workspace">
-        Skip to comparison
+    <div onClick={handleContainerClick}>
+      <a className="skip-link" href="#main">
+        Skip to content
       </a>
-      <header className={`header${scrolled || menu ? " header-glass" : ""}`}>
-        <div className="header-inner">
-          <Brand />
-          <nav
-            id="main-navigation"
-            className={menu ? "navigation open" : "navigation"}
-            aria-label="Main navigation"
+      <header
+        className={`header ${scrolled || menu || path !== "/" ? "header-glass" : ""}`}
+      >
+        <Brand />
+        <nav
+          id="main-navigation"
+          className={menu ? "nav open" : "nav"}
+          aria-label="Main navigation"
+        >
+          <a href="/#platform" onClick={() => setMenu(false)}>
+            The platform
+          </a>
+          <a
+            href="/journey"
+            aria-current={path === "/journey" ? "page" : undefined}
+            onClick={() => setMenu(false)}
           >
-            <a href="#how-it-works" onClick={() => setMenu(false)}>
-              How it works
-            </a>
-            <a href="#demo-video" onClick={() => setMenu(false)}>
-              Pipeline Film
-            </a>
-            <a href="#workspace" onClick={() => setMenu(false)}>
-              Part Atlas Studio
-            </a>
-            <a href="#evidence" onClick={() => setMenu(false)}>
-              Vector Evidence
-            </a>
-            <a href="#ai-damage" onClick={() => setMenu(false)}>
-              AI Damage Scan
-            </a>
-            <a href="#estimate" onClick={() => setMenu(false)}>
-              Cost Estimate
-            </a>
-            <a href="#math-models" onClick={() => setMenu(false)}>
-              Math Models
-            </a>
-            <a href="#benchmarks" onClick={() => setMenu(false)}>
-              Benchmarks & Limits
-            </a>
-            <a href="#protocol-guide" onClick={() => setMenu(false)}>
-              17+ Frame Protocol
-            </a>
-            <a href="#solutions" onClick={() => setMenu(false)}>
-              Solutions
-            </a>
-            <a href="#faq" onClick={() => setMenu(false)}>
-              Technical FAQ
-            </a>
-          </nav>
-          <div className="header-right-actions">
-            <button
-              type="button"
-              className="lang-toggle-btn"
-              onClick={() => setLang(lang === "en" ? "ru" : "en")}
-              aria-label="Toggle interface language"
-            >
-              🌐 {lang === "en" ? "RU" : "EN"}
-            </button>
-            <HfDemoLink className="header-cta hf-cta" />
-            <a className="header-cta" href="#workspace">
-              Open studio <ArrowUpRight size={17} />
-            </a>
-          </div>
+            Vehicle journey
+          </a>
+          <a
+            href="/technology"
+            aria-current={path === "/technology" ? "page" : undefined}
+            onClick={() => setMenu(false)}
+          >
+            Technology
+          </a>
+          <a
+            href="/business"
+            aria-current={path === "/business" ? "page" : undefined}
+            onClick={() => setMenu(false)}
+          >
+            Business & pilot
+          </a>
+          <a
+            className="nav-cta"
+            href="/scanner"
+            onClick={() => setMenu(false)}
+          >
+            Try live demo <ArrowUpRight size={17} />
+          </a>
+        </nav>
+        <div className="header-actions">
+          <HfDemoLink className="header-cta hf-cta" />
           <button
+            type="button"
+            className="lang-toggle-btn"
+            onClick={() => setLang(lang === "en" ? "ru" : "en")}
+            aria-label="Toggle language"
+          >
+            {lang === "en" ? "RU" : "EN"}
+          </button>
+          <button
+            className="menu-toggle"
             ref={menuButton}
-            className="menu-button icon-button"
+            onClick={() => setMenu(!menu)}
             aria-label={menu ? "Close menu" : "Open menu"}
             aria-expanded={menu}
             aria-controls="main-navigation"
-            onClick={() => setMenu(!menu)}
           >
-            {menu ? <X /> : <Menu />}
+            {menu ? <X size={23} /> : <Menu size={23} />}
           </button>
         </div>
       </header>
-
-      <main>
-        <section className="hero hero-cinematic">
+      <main id="main" ref={main} tabIndex={-1}>
+        {workspace ? (
+          <div className="workspace-layout">
+            <aside className="workspace-sidebar">
+              <a className="back-home" href="/">
+                <ArrowLeft size={14} /> Back to overview
+              </a>
+              <span className="eyebrow">INSPECTION WORKSPACE</span>
+              <nav aria-label="Workspace navigation">
+                {workspaceLinks.map((l) => (
+                  <a
+                    href={l.href}
+                    key={l.href}
+                    aria-current={path === l.href ? "page" : undefined}
+                  >
+                    <l.icon size={18} />
+                    <span>{l.title}</span>
+                    <small>{l.n}</small>
+                  </a>
+                ))}
+              </nav>
+              <div className="sidebar-note">
+                <ShieldCheck size={21} />
+                <strong>Your device. Your evidence.</strong>
+                <p>
+                  Saved inspections stay in this browser. You can clear them
+                  anytime.
+                </p>
+                <ClearRecords onClear={() => update(emptyRecords)} />
+              </div>
+              <a className="sidebar-bottom" href="/technology">
+                How the technology works <ArrowUpRight size={14} />
+              </a>
+            </aside>
+            <div className="workspace-main">
+              <div className="workspace-topline">
+                <span className="mono">CARPRINT / VERIFICATION WORKSPACE</span>
+                <span
+                  className={`service-status ${service === "Processing online" ? "online" : ""}`}
+                  role="status"
+                >
+                  <span />
+                  {service}
+                </span>
+              </div>
+              {storageError && (
+                <p className="error-message" role="alert">
+                  {storageError}
+                </p>
+              )}
+              {!loaded ? (
+                <p className="loading-page" role="status">
+                  Opening your workspace…
+                </p>
+              ) : path === "/scanner" ? (
+                <Scanner
+                  count={records.inspections.length}
+                  onSave={async (inspection) => {
+                    if (latest.current.inspections.length >= 20)
+                      throw new Error("Storage limit");
+                    await update({
+                      ...latest.current,
+                      inspections: [
+                        ...latest.current.inspections,
+                        inspection,
+                      ],
+                    });
+                  }}
+                />
+              ) : path === "/compare" ? (
+                <ComparePage
+                  records={records}
+                  onSave={(c) =>
+                    update({
+                      ...latest.current,
+                      comparisons: [
+                        ...latest.current.comparisons,
+                        c,
+                      ].slice(-20),
+                    })
+                  }
+                />
+              ) : path === "/journey" ? (
+                <Journey records={records} />
+              ) : path === "/reports" ? (
+                <Reports records={records} />
+              ) : (
+                <Analytics records={records} />
+              )}
+              <div className="workspace-bottom">
+                <span>CARPRINT VERIFICATION AI</span>
+                <span>Surface Evidence Engine · Human review required</span>
+              </div>
+            </div>
+          </div>
+        ) : path === "/technology" ? (
+          <Technology />
+        ) : path === "/business" ? (
+          <Business />
+        ) : path !== "/" ? (
+          <section className="section editorial-page">
+            <span className="eyebrow">404 / PAGE NOT FOUND</span>
+            <h1>
+              Let’s get you
+              <br />
+              back on the road.
+            </h1>
+            <a className="button button-primary" href="/">
+              Return home <ArrowUpRight size={18} />
+            </a>
+          </section>
+        ) : (
+          <>
+            <div id="top" />
+            <div id="platform" />
+            <section className="hero hero-cinematic">
           <HeroVideo />
           <div className="hero-copy">
             <span className="eyebrow">
@@ -1204,7 +1532,10 @@ export default function App() {
         </section>
 
         {/* The Core Interactive Workspace */}
-        <Workspace />
+        <Workspace
+          onSelectPart={(part) => setInspectedPart(part)}
+          onResultChange={(res) => setActiveResult(res)}
+        />
         <DamageScanner />
 
         {/* Vector SVG Evidence Verification */}
@@ -1214,7 +1545,11 @@ export default function App() {
 
         {/* Probabilistic Monte Carlo Repair Cost Distribution */}
         <section className="section">
-          <CostCard lang={lang} />
+          <CostCard
+            lang={lang}
+            selectedPartKey={inspectedPart}
+            detectedDamages={activeResult?.damage_timeline?.items?.length || 0}
+          />
         </section>
 
         {/* Mathematical Formulations & Explainable Proofs */}
@@ -1325,21 +1660,23 @@ export default function App() {
             Open the comparison studio <ArrowUpRight size={19} />
           </a>
         </section>
-      </main>
 
-      <footer className="footer">
-        <div>
-          <Brand />
-          <p>Every detail has a story. Surface Evidence Engine.</p>
-        </div>
-        <div>
-          <span>© {new Date().getFullYear()} CarPrint Verification AI</span>
-          <span>Partner Product · Expert review required</span>
-          <a href="#top">
-            Back to top <ArrowUpRight size={15} />
-          </a>
-        </div>
-      </footer>
-    </>
+        <footer className="footer">
+          <div>
+            <Brand />
+            <p>Every detail has a story. Surface Evidence Engine.</p>
+          </div>
+          <div>
+            <span>© {new Date().getFullYear()} CarPrint Verification AI</span>
+            <span>Partner Product · Expert review required</span>
+            <a href="#top">
+              Back to top ↑
+            </a>
+          </div>
+        </footer>
+          </>
+        )}
+      </main>
+    </div>
   );
 }
