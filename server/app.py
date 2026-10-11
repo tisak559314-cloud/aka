@@ -29,7 +29,7 @@ ROOT = Path(__file__).resolve().parents[1]
 app = FastAPI(title='CarPrint Surface Evidence Engine API', version='1.0.0')
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 cv2.setNumThreads(2)
-MAX_BYTES = 8 * 1024 * 1024
+MAX_BYTES = 2 * 1024 * 1024
 
 PART_METADATA = {
     'left_front_door': {'name': 'Front Left Door Panel', 'type': 'planar_panel', 'oem_distinctiveness': 0.65},
@@ -60,7 +60,7 @@ def data_url(image):
 
 def decode(data):
     if not data or len(data) > MAX_BYTES:
-        raise HTTPException(413, 'Each image must be between 1 byte and 8 MB.')
+        raise HTTPException(413, 'Each image must be between 1 byte and 2 MB.')
     # Only JPEG, PNG and WebP are supported; SVG and arbitrary files are rejected.
     if not (data.startswith(b'\xff\xd8\xff') or data.startswith(b'\x89PNG\r\n\x1a\n') or (data.startswith(b'RIFF') and data[8:12] == b'WEBP')):
         raise HTTPException(415, 'Supported image formats are JPG, PNG and WebP.')
@@ -440,6 +440,31 @@ def get_preset_image(preset_id: str, view: str):
     )
 
 
+@app.post('/api/inspect')
+def inspect(photo: UploadFile = File(...)):
+    """Real preliminary quality measurements; no damage or identity classification."""
+    started = time.perf_counter()
+    raw = photo.file.read(MAX_BYTES + 1)
+    image = decode(raw)
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    metrics = quality(gray)
+    points = cv2.SIFT_create(nfeatures=2500).detect(gray, None)
+    warnings = []
+    if metrics['brightness'] < 30 or metrics['brightness'] > 230:
+        warnings.append('The photograph is too dark or too bright. Retake under even lighting.')
+    if metrics['sharpness'] < 35:
+        warnings.append('Limited texture or sharpness. Move closer to a distinctive detail and keep the camera steady.')
+    if min(gray.shape) < 300:
+        warnings.append('Low resolution. A photograph of at least 300 pixels on each side is recommended.')
+    return {
+        'status': 'RETAKE' if warnings else 'READY', 'quality': metrics,
+        'keypoints': len(points), 'warnings': warnings, 'preview': data_url(image),
+        'sha256': hashlib.sha256(raw).hexdigest(),
+        'elapsed_ms': round((time.perf_counter() - started) * 1000),
+        'algorithm_version': 'carprint-quality-0.1.0',
+    }
+
+
 @app.get('/api/example/{view}')
 def example(view: str):
     return get_preset_image('synthetic', view)
@@ -474,4 +499,10 @@ if (ROOT / 'public/evidence').exists():
     app.mount('/evidence', StaticFiles(directory=ROOT / 'public/evidence'), name='evidence')
 
 if (ROOT / 'dist').exists():
+    def frontend_page():
+        return FileResponse(ROOT / 'dist/index.html')
+
+    for page in ('scanner', 'compare', 'journey', 'reports', 'analytics', 'technology', 'business'):
+        app.add_api_route('/' + page, frontend_page, methods=['GET'], include_in_schema=False)
+
     app.mount('/', StaticFiles(directory=ROOT / 'dist', html=True), name='frontend')
