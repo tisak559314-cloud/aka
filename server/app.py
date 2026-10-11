@@ -364,9 +364,11 @@ _CACHED_BASE_IMG = None
 def get_base_img():
     global _CACHED_BASE_IMG
     if _CACHED_BASE_IMG is None:
-        path = ROOT / 'public/images/car-studio.png'
-        if path.exists():
-            _CACHED_BASE_IMG = cv2.imread(str(path))
+        # vercel.json excludes public/** from the function bundle; server/assets ships with it.
+        for path in (ROOT / 'server/assets/car-studio.png', ROOT / 'public/images/car-studio.png'):
+            if path.exists():
+                _CACHED_BASE_IMG = cv2.imread(str(path))
+                break
     return _CACHED_BASE_IMG
 
 
