@@ -10,6 +10,15 @@ import { PipelineFilm } from "./components/PipelineFilm";
 import { MathModels } from "./components/MathModels";
 import { BenchmarksLimits } from "./components/BenchmarksLimits";
 import {
+  ArrowUpRight,
+  ArrowRight,
+  ArrowDown,
+  Fingerprint,
+  ScanLine,
+  ShieldCheck,
+  Camera,
+  Check,
+  Plus,
   Menu,
   X,
   Upload,
@@ -28,17 +37,6 @@ import {
   Sliders,
   ShieldAlert,
 } from "lucide-react";
-import { Brand, Home, Technology, Business, Footer } from "./Marketing";
-import {
-  Scanner,
-  ComparePage,
-  Journey,
-  Reports,
-  Analytics,
-  ClearRecords,
-} from "./Platform";
-import { emptyRecords, readRecords, writeRecords } from "./data";
-import type { Records } from "./data";
 
 type QualityItem = {
   brightness: number;
@@ -956,6 +954,7 @@ const faqs = [
     "Photos are processed on the server without external AI providers. There is no permanent photo storage or customer database. Upload handling can use a temporary file, which is closed and deleted after the request.",
   ],
 ];
+
 export default function App() {
   const [lang, setLang] = useState<"en" | "ru">("en");
   const [menu, setMenu] = useState(false);
@@ -985,68 +984,26 @@ export default function App() {
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 32);
-    const onPop = () => {
-      setLocation(window.location.pathname + window.location.search);
-      setMenu(false);
-    };
     window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("popstate", onPop);
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("popstate", onPop);
-    };
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   useEffect(() => {
-    if (!menu) return;
-    const key = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && menu) {
         setMenu(false);
         menuButton.current?.focus();
       }
     };
-    document.addEventListener("keydown", key);
-    return () => document.removeEventListener("keydown", key);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
   }, [menu]);
 
   return (
-    <div
-      onClick={(e) => {
-        if (
-          e.defaultPrevented ||
-          e.button !== 0 ||
-          e.metaKey ||
-          e.ctrlKey ||
-          e.shiftKey ||
-          e.altKey
-        )
-          return;
-        const a = (e.target as Element).closest("a");
-        if (!a || a.target || a.hasAttribute("download")) return;
-        const url = new URL(a.href);
-        if (url.origin !== window.location.origin) return;
-        if (
-          url.pathname === window.location.pathname &&
-          url.search === window.location.search &&
-          url.hash
-        ) {
-          setMenu(false);
-          return;
-        }
-        e.preventDefault();
-        history.pushState(null, "", url.pathname + url.search + url.hash);
-        setLocation(url.pathname + url.search);
-        setMenu(false);
-        window.scrollTo({ top: 0, behavior: "instant" });
-        requestAnimationFrame(() => {
-          if (url.hash)
-            document.getElementById(url.hash.slice(1))?.scrollIntoView();
-          else main.current?.focus({ preventScroll: true });
-        });
-      }}
-    >
-      <a className="skip-link" href="#main">
-        Skip to content
+    <>
+      <div id="top" />
+      <a className="skip-link" href="#workspace">
+        Skip to comparison
       </a>
       <header className={`header${scrolled || menu ? " header-glass" : ""}`}>
         <div className="header-inner">
@@ -1108,33 +1065,9 @@ export default function App() {
             aria-controls="main-navigation"
             onClick={() => setMenu(!menu)}
           >
-            Vehicle journey
-          </a>
-          <a
-            href="/technology"
-            aria-current={path === "/technology" ? "page" : undefined}
-          >
-            Technology
-          </a>
-          <a
-            href="/business"
-            aria-current={path === "/business" ? "page" : undefined}
-          >
-            Business & pilot
-          </a>
-          <a className="nav-cta" href="/scanner">
-            Try live demo <ArrowUpRight size={17} />
-          </a>
-        </nav>
-        <button
-          className="menu-toggle"
-          ref={menuButton}
-          onClick={() => setMenu(!menu)}
-          aria-label={menu ? "Close menu" : "Open menu"}
-          aria-expanded={menu}
-        >
-          {menu ? <X size={23} /> : <Menu size={23} />}
-        </button>
+            {menu ? <X /> : <Menu />}
+          </button>
+        </div>
       </header>
 
       <main>
@@ -1160,88 +1093,13 @@ export default function App() {
               <a className="button button-lime" href="#workspace">
                 Compare your photos <ArrowUpRight size={19} />
               </a>
-              <span className="eyebrow">INSPECTION WORKSPACE</span>
-              <nav aria-label="Workspace navigation">
-                {workspaceLinks.map((l) => (
-                  <a
-                    href={l.href}
-                    key={l.href}
-                    aria-current={path === l.href ? "page" : undefined}
-                  >
-                    <l.icon size={18} />
-                    <span>{l.title}</span>
-                    <small>{l.n}</small>
-                  </a>
-                ))}
-              </nav>
-              <div className="sidebar-note">
-                <ShieldCheck size={21} />
-                <strong>Your device. Your evidence.</strong>
-                <p>
-                  Saved inspections stay in this browser. You can clear them
-                  anytime.
-                </p>
-                <ClearRecords onClear={() => update(emptyRecords)} />
-              </div>
-              <a className="sidebar-bottom" href="/technology">
-                How the technology works <ArrowUpRight size={14} />
+              <a className="hero-secondary" href="#how-it-works">
+                See how it works <ArrowDown size={16} />
               </a>
-            </aside>
-            <div className="workspace-main">
-              <div className="workspace-topline">
-                <span className="mono">CARPRINT / VERIFICATION WORKSPACE</span>
-                <span
-                  className={`service-status ${service === "Processing online" ? "online" : ""}`}
-                  role="status"
-                >
-                  <span />
-                  {service}
-                </span>
-              </div>
-              {storageError && (
-                <p className="error-message" role="alert">
-                  {storageError}
-                </p>
-              )}
-              {!loaded ? (
-                <p className="loading-page" role="status">
-                  Opening your workspace…
-                </p>
-              ) : path === "/scanner" ? (
-                <Scanner
-                  count={records.inspections.length}
-                  onSave={async (inspection) => {
-                    if (latest.current.inspections.length >= 20)
-                      throw new Error("Storage limit");
-                    await update({
-                      ...latest.current,
-                      inspections: [...latest.current.inspections, inspection],
-                    });
-                  }}
-                />
-              ) : path === "/compare" ? (
-                <ComparePage
-                  records={records}
-                  onSave={(c) =>
-                    update({
-                      ...latest.current,
-                      comparisons: [...latest.current.comparisons, c].slice(
-                        -20,
-                      ),
-                    })
-                  }
-                />
-              ) : path === "/journey" ? (
-                <Journey records={records} />
-              ) : path === "/reports" ? (
-                <Reports records={records} />
-              ) : (
-                <Analytics records={records} />
-              )}
-              <div className="workspace-bottom">
-                <span>CARPRINT VERIFICATION AI</span>
-                <span>Prototype · Human review required</span>
-              </div>
+            </div>
+            <div className="hero-note">
+              <span className="mini-cross">+</span> Real visual evidence. Always
+              reviewed by a human.
             </div>
           </div>
         </section>

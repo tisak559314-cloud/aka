@@ -3,11 +3,12 @@
   isolation: isolate;
   display: flex;
   align-items: center;
-  min-height: min(940px, 100svh);
-  padding: 150px max(64px, calc((100vw - 1252px) / 2)) 135px;
+  max-width: none;
+  min-height: min(983px, 100svh);
+  padding: 148px max(60px, calc((100vw - 1240px) / 2)) 100px;
   overflow: hidden;
-  background: #0a1114;
-  color: white;
+  background: #121710;
+  color: #fff;
 }
 .hero-film {
   position: absolute;
@@ -29,230 +30,113 @@
 .hero-film video.failed {
   visibility: hidden;
 }
-.hero-cinematic:after {
+.hero-cinematic::after {
   content: "";
   position: absolute;
   z-index: -1;
   inset: 0;
   background:
-    linear-gradient(90deg, #061218e0 0%, #071519ba 38%, #07121538 83%),
-    linear-gradient(0deg, #081317bf, transparent 37%);
+    linear-gradient(
+      90deg,
+      rgba(8, 14, 9, 0.88),
+      rgba(8, 14, 9, 0.61) 43%,
+      rgba(8, 14, 9, 0.12) 85%
+    ),
+    linear-gradient(0deg, rgba(8, 14, 9, 0.65), transparent 35%);
   pointer-events: none;
 }
-.hero-copy {
-  max-width: 820px;
+.hero-cinematic .hero-copy {
+  padding: 0;
+  max-width: 620px;
 }
-.hero-copy > .eyebrow {
-  font-size: 9px;
-  letter-spacing: 1.6px;
-  color: #c2d5d4;
+.hero-cinematic h1 {
+  margin: 28px 0;
+  font-size: clamp(62px, 6.5vw, 90px);
 }
-.hero-copy h1 {
-  font-size: clamp(56px, 6.6vw, 94px);
-  font-weight: 500;
-  letter-spacing: -4.7px;
-  line-height: 1.04;
-  margin: 27px 0 28px;
+.hero-cinematic .eyebrow {
+  color: #e0ebd6;
 }
-.hero-copy h1 em {
-  color: #80e8d3;
+.hero-cinematic .status-dot {
+  background: var(--lime);
 }
-.hero-copy > p {
+.hero-cinematic .asterisk {
+  color: var(--lime);
+}
+.hero-cinematic .hero-copy > p {
+  color: #d7ddd2;
+  max-width: 395px;
   font-size: 15px;
-  line-height: 1.8;
-  color: #b6c9cc;
 }
-.hero-actions {
-  display: flex;
-  align-items: center;
-  gap: 30px;
-  margin-top: 33px;
+.hero-cinematic .hero-note {
+  color: #d4ddcd;
 }
-.hero-secondary {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 11px;
-  color: #dbe6e6;
+.hero-cinematic .mini-cross {
+  color: var(--lime);
 }
-.hero-secondary:hover {
-  color: var(--teal);
-}
-.hero-note {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  color: #8eaaa9;
-  font-size: 9px;
-  margin-top: 30px;
-}
-.hero-note > span {
-  height: 4px;
-  width: 4px;
-  border-radius: 50%;
-  background: #6c9f93;
-}
-.hero-index {
-  position: absolute;
-  bottom: 32px;
-  left: max(64px, calc((100vw - 1252px) / 2));
-  font-size: 8px;
-  color: #8ca3ac;
-  letter-spacing: 1px;
-  display: flex;
-  align-items: center;
-  gap: 25px;
-}
-.hero-index > a {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid #4c6668;
-  border-radius: 50%;
-  height: 31px;
-  width: 31px;
-  color: #c2dad4;
+.hero-cinematic .hero-secondary:hover {
+  color: var(--lime);
 }
 .hero-film-controls {
   position: absolute;
-  right: max(64px, calc((100vw - 1252px) / 2));
-  bottom: 27px;
+  right: max(60px, calc((100vw - 1240px) / 2));
+  bottom: 26px;
   display: flex;
   align-items: center;
   gap: 17px;
 }
 .hero-film-controls > span {
-  font-size: 8px;
+  font-size: 9px;
   letter-spacing: 1.5px;
-  color: #a1bbba;
+  color: #dde7d6;
 }
 .film-toggle {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  min-height: 38px;
-  padding: 0 13px;
-  color: #d5eae5;
-  background: #0f2324a6;
-  border: 1px solid #7d9f9659;
-  border-radius: 4px;
-  font-size: 10px;
+  min-height: 42px;
+  padding: 0 15px;
+  color: white;
+  background: rgba(17, 26, 18, 0.75);
+  border: 1px solid #ffffff50;
+  border-radius: 5px;
+  font-size: 11px;
   backdrop-filter: blur(8px);
 }
 .film-toggle:hover {
-  background: #224639;
+  background: #33422b;
 }
-@media (max-width: 1100px) {
+@media (max-width: 760px) {
   .hero.hero-cinematic {
-    padding-left: 40px;
-    padding-right: 40px;
+    min-height: 100svh;
+    padding: 120px 22px 90px;
   }
-  .hero-index {
-    left: 40px;
-  }
-  .hero-film-controls {
-    right: 40px;
-  }
-  .hero-copy h1 {
-    font-size: 74px;
+  .hero-cinematic h1 {
+    font-size: clamp(57px, 10vw, 72px);
     letter-spacing: -3.6px;
   }
-}
-@media (max-width: 850px) {
-  .hero.hero-cinematic {
-    min-height: 100svh;
-    padding-top: 130px;
-    padding-bottom: 130px;
-  }
-  .hero-copy h1 {
-    font-size: 70px;
-  }
-  .hero-copy > .eyebrow {
-    font-size: 8px;
-  }
-  .hero-copy > p {
+  .hero-cinematic .hero-copy > p {
+    max-width: 370px;
     font-size: 14px;
   }
-}
-@media (max-width: 640px) {
-  .hero.hero-cinematic {
-    padding: 125px 22px 120px;
-    min-height: 100svh;
-  }
-  .hero-copy h1 {
-    font-size: clamp(44px, 10.7vw, 64px);
-    letter-spacing: -2.7px;
-    line-height: 1.07;
-    margin: 25px 0;
-  }
-  .hero-copy > .eyebrow {
-    font-size: 6.5px;
-    letter-spacing: 1.1px;
-    gap: 7px;
-  }
-  .hero-copy > p {
-    font-size: 13px;
-    max-width: 300px;
-  }
-  .hero-copy h1 .desktop-break {
-    display: none;
-  }
-  .hero-actions {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 24px;
-    margin-top: 28px;
-  }
-  .hero-actions .button {
-    font-size: 11px;
-    min-height: 48px;
-  }
-  .hero-note {
-    font-size: 8px;
-    line-height: 1.8;
-    max-width: 240px;
-    margin-top: 26px;
-    align-items: flex-start;
-  }
-  .hero-note > span {
-    margin-top: 6px;
-    flex-shrink: 0;
-  }
-  .hero-index {
-    left: 22px;
-    bottom: 26px;
-  }
-  .hero-index > span {
-    display: none;
+  .hero-cinematic::after {
+    background:
+      linear-gradient(90deg, #080e09df, #080e0980),
+      linear-gradient(0deg, #080e0980, transparent 40%);
   }
   .hero-film-controls {
     right: 22px;
-    bottom: 23px;
-    gap: 12px;
-  }
-  .hero-film-controls > span {
-    font-size: 6px;
-  }
-  .hero-cinematic:after {
-    background:
-      linear-gradient(90deg, #06151ade, #07151b91),
-      linear-gradient(0deg, #07151bbf, transparent 45%);
-  }
-  .film-toggle {
-    min-height: 36px;
-    font-size: 9px;
+    bottom: 20px;
   }
 }
-@media (max-width: 360px) {
-  .hero-copy h1 {
-    font-size: 43px;
-    letter-spacing: -2px;
-  }
-  .hero-copy > .eyebrow {
-    font-size: 5.8px;
-    letter-spacing: 0.8px;
-  }
+@media (max-width: 370px) {
   .hero.hero-cinematic {
-    padding-top: 115px;
+    padding: 110px 16px 85px;
+  }
+  .hero-cinematic h1 {
+    font-size: 56px;
+    letter-spacing: -3.5px;
+  }
+  .hero-film-controls {
+    right: 16px;
   }
 }
