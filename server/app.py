@@ -445,5 +445,33 @@ def example(view: str):
     return get_preset_image('synthetic', view)
 
 
+@app.get('/api/estimate')
+def get_repair_estimate(part_id: Optional[str] = None):
+    sample_file = ROOT / 'src/data/sample_cost.json'
+    if sample_file.exists():
+        import json
+        data = json.loads(sample_file.read_text(encoding='utf-8'))
+        if part_id:
+            filtered_parts = [p for p in data.get('parts', []) if p.get('part_key') == part_id or p.get('part') == part_id]
+            if filtered_parts:
+                return {**data, 'selected_part': filtered_parts[0]}
+        return data
+    return {'status': 'error', 'detail': 'Estimate matrix not found'}
+
+
+@app.get('/api/evidence/pair')
+def get_evidence_pair():
+    pair_file = ROOT / 'public/evidence/pair.json'
+    if pair_file.exists():
+        import json
+        return json.loads(pair_file.read_text(encoding='utf-8'))
+    raise HTTPException(404, 'Evidence pair not found')
+
+
+if (ROOT / 'public/media').exists():
+    app.mount('/media', StaticFiles(directory=ROOT / 'public/media'), name='media')
+if (ROOT / 'public/evidence').exists():
+    app.mount('/evidence', StaticFiles(directory=ROOT / 'public/evidence'), name='evidence')
+
 if (ROOT / 'dist').exists():
     app.mount('/', StaticFiles(directory=ROOT / 'dist', html=True), name='frontend')

@@ -4,6 +4,11 @@ import PartAtlas from "./PartAtlas";
 import AuditCertificateModal, { type AuditCertificateData } from "./AuditCertificateModal";
 import DamageTimelineView from "./DamageTimelineView";
 import ProtocolGuide from "./ProtocolGuide";
+import { CostCard } from "./components/CostCard";
+import { MatchView } from "./components/MatchView";
+import { PipelineFilm } from "./components/PipelineFilm";
+import { MathModels } from "./components/MathModels";
+import { BenchmarksLimits } from "./components/BenchmarksLimits";
 import {
   ArrowUpRight,
   ArrowRight,
@@ -951,6 +956,7 @@ const faqs = [
 ];
 
 export default function App() {
+  const [lang, setLang] = useState<"en" | "ru">("en");
   const [menu, setMenu] = useState(false);
   const [scrolled, setScrolled] = useState(() => window.scrollY > 32);
   const menuButton = useRef<HTMLButtonElement>(null);
@@ -1010,8 +1016,23 @@ export default function App() {
             <a href="#how-it-works" onClick={() => setMenu(false)}>
               How it works
             </a>
+            <a href="#demo-video" onClick={() => setMenu(false)}>
+              Pipeline Film
+            </a>
             <a href="#workspace" onClick={() => setMenu(false)}>
               Part Atlas Studio
+            </a>
+            <a href="#evidence" onClick={() => setMenu(false)}>
+              Vector Evidence
+            </a>
+            <a href="#estimate" onClick={() => setMenu(false)}>
+              Cost Estimate
+            </a>
+            <a href="#math-models" onClick={() => setMenu(false)}>
+              Math Models
+            </a>
+            <a href="#benchmarks" onClick={() => setMenu(false)}>
+              Benchmarks & Limits
             </a>
             <a href="#protocol-guide" onClick={() => setMenu(false)}>
               17+ Frame Protocol
@@ -1023,9 +1044,19 @@ export default function App() {
               Technical FAQ
             </a>
           </nav>
-          <a className="header-cta" href="#workspace">
-            Open studio <ArrowUpRight size={17} />
-          </a>
+          <div className="header-right-actions">
+            <button
+              type="button"
+              className="lang-toggle-btn"
+              onClick={() => setLang(lang === "en" ? "ru" : "en")}
+              aria-label="Toggle interface language"
+            >
+              🌐 {lang === "en" ? "RU" : "EN"}
+            </button>
+            <a className="header-cta" href="#workspace">
+              Open studio <ArrowUpRight size={17} />
+            </a>
+          </div>
           <button
             ref={menuButton}
             className="menu-button icon-button"
@@ -1153,8 +1184,33 @@ export default function App() {
           </div>
         </section>
 
+        {/* Pipeline Demonstration Video */}
+        <section className="section">
+          <PipelineFilm lang={lang} />
+        </section>
+
         {/* The Core Interactive Workspace */}
         <Workspace />
+
+        {/* Vector SVG Evidence Verification */}
+        <section className="section">
+          <MatchView lang={lang} />
+        </section>
+
+        {/* Probabilistic Monte Carlo Repair Cost Distribution */}
+        <section className="section">
+          <CostCard lang={lang} />
+        </section>
+
+        {/* Mathematical Formulations & Explainable Proofs */}
+        <section className="section">
+          <MathModels lang={lang} />
+        </section>
+
+        {/* Industry Benchmarks & Honest Operating Limits */}
+        <section className="section">
+          <BenchmarksLimits lang={lang} />
+        </section>
 
         {/* 17+ Frame Smartphone Capture Protocol */}
         <section className="section protocol-outer-section">

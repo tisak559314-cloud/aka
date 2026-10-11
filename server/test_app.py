@@ -115,3 +115,20 @@ def test_presets_list_and_scenario_images():
     assert 'distinctiveness' in result
     assert 'damage_timeline' in result
 
+
+def test_estimate_and_evidence_pair():
+    res_est = client.get('/api/estimate')
+    assert res_est.status_code == 200
+    est = res_est.json()
+    assert 'p50' in est
+    assert 'usd' in est
+    assert est['currency'] == 'UZS'
+    assert len(est['parts']) > 0
+
+    res_pair = client.get('/api/evidence/pair')
+    assert res_pair.status_code == 200
+    pair_data = res_pair.json()
+    assert 'matches' in pair_data
+    assert 'stats' in pair_data
+
+
