@@ -166,7 +166,7 @@ function PhotoInput({
       >
         {value ? (
           <>
-            <img src={value.url} alt={label} />
+            <img src={value.url} alt={label} loading="eager" decoding="async" />
             <span className="replace-photo">
               <Camera size={16} /> Replace photo
             </span>
@@ -376,17 +376,26 @@ function Comparison({
             className="evidence-image"
             src={result.evidence_image}
             alt="Geometrically consistent points linked between both photos"
+            loading="eager"
+            decoding="sync"
           />
         </div>
       )}
 
       {tab === "overlay" && (
         <div className="overlay-comparison">
-          <img src={result.reference_image} alt="Reference photo" />
+          <img
+            src={result.reference_image}
+            alt="Reference photo"
+            loading="eager"
+            decoding="sync"
+          />
           <img
             className="aligned-image"
             src={result.aligned_image!}
             alt="Aligned follow-up photo"
+            loading="eager"
+            decoding="sync"
             style={{ clipPath: `inset(0 0 0 ${split}%)` }}
           />
           <div className="compare-divider" style={{ left: `${split}%` }}>
@@ -945,6 +954,27 @@ export default function App() {
   const [menu, setMenu] = useState(false);
   const [scrolled, setScrolled] = useState(() => window.scrollY > 32);
   const menuButton = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    // Warm up and pre-decode critical assets in GPU memory for instant display
+    const prewarm = ["/images/car-studio.webp", "/videos/hero-poster.jpg", "/favicon.svg"];
+    prewarm.forEach((src) => {
+      const img = new Image();
+      img.src = src;
+      if ("decode" in img) {
+        img.decode().catch(() => {});
+      }
+    });
+
+    const prefetchIdle = () => {
+      fetch("/api/presets").catch(() => {});
+    };
+    if ("requestIdleCallback" in window) {
+      (window as any).requestIdleCallback(prefetchIdle);
+    } else {
+      setTimeout(prefetchIdle, 800);
+    }
+  }, []);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 32);

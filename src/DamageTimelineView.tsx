@@ -102,6 +102,8 @@ export default function DamageTimelineView({
           src={displayImage}
           alt="Surface Damage Timeline registration"
           className="damage-main-image"
+          loading="eager"
+          decoding="sync"
         />
 
         {/* Selected Damage Reticle Box */}

@@ -7,4 +7,16 @@ export default defineConfig({
     port: 5173,
     proxy: { "/api": "http://127.0.0.1:8000" },
   },
+  build: {
+    target: "esnext",
+    cssCodeSplit: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ["react", "react-dom"],
+          icons: ["lucide-react"],
+        },
+      },
+    },
+  },
 });

@@ -21,11 +21,13 @@ from typing import Optional
 import cv2
 import numpy as np
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 
 ROOT = Path(__file__).resolve().parents[1]
 app = FastAPI(title='CarPrint Surface Evidence Engine API', version='1.0.0')
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 cv2.setNumThreads(2)
 MAX_BYTES = 8 * 1024 * 1024
 
@@ -353,15 +355,36 @@ def get_presets():
     ]
 
 
+_PRESET_CACHE: dict[tuple[str, str], bytes] = {}
+_CACHED_BASE_IMG = None
+
+
+def get_base_img():
+    global _CACHED_BASE_IMG
+    if _CACHED_BASE_IMG is None:
+        path = ROOT / 'public/images/car-studio.png'
+        if path.exists():
+            _CACHED_BASE_IMG = cv2.imread(str(path))
+    return _CACHED_BASE_IMG
+
+
 @app.get('/api/presets/{preset_id}/{view}')
 def get_preset_image(preset_id: str, view: str):
     if view not in ('reference', 'current'):
         raise HTTPException(404, 'View not found.')
-        
-    base_img = cv2.imread(str(ROOT / 'public/images/car-studio.png'))
+
+    cache_key = (preset_id, view)
+    if cache_key in _PRESET_CACHE:
+        return Response(
+            _PRESET_CACHE[cache_key],
+            media_type='image/jpeg',
+            headers={'Cache-Control': 'public, max-age=86400, stale-while-revalidate=604800'},
+        )
+
+    base_img = get_base_img()
     if base_img is None:
         raise HTTPException(503, 'Base vehicle images unavailable.')
-        
+
     if preset_id == 'service-intake':
         # Front door region
         crop = base_img[350:800, 400:1300].copy()
@@ -375,8 +398,8 @@ def get_preset_image(preset_id: str, view: str):
             pts = np.array([[w // 2 - 35, h // 2 + 15], [w // 2, h // 2 + 30], [w // 2 + 50, h // 2 + 45]], np.int32)
             cv2.polylines(crop, [pts], False, (215, 225, 230), 4, cv2.LINE_AA)
             cv2.polylines(crop, [pts], False, (35, 45, 55), 1, cv2.LINE_AA)
-        return Response(jpeg(crop), media_type='image/jpeg', headers={'Cache-Control': 'public, max-age=3600'})
-        
+        encoded_bytes = jpeg(crop)
+
     elif preset_id == 'cobalt-negative':
         # Mass-produced smooth panel with identical clean geometry
         crop = base_img[350:780, 420:1280].copy()
@@ -388,8 +411,8 @@ def get_preset_image(preset_id: str, view: str):
             M = cv2.getRotationMatrix2D((w / 2, h / 2), -2.0, 1.01)
             clean_panel = cv2.warpAffine(clean_panel, M, (w, h), borderMode=cv2.BORDER_REFLECT)
             clean_panel = cv2.convertScaleAbs(clean_panel, alpha=1.04, beta=-4)
-        return Response(jpeg(clean_panel), media_type='image/jpeg', headers={'Cache-Control': 'public, max-age=3600'})
-        
+        encoded_bytes = jpeg(clean_panel)
+
     elif preset_id == 'wheel-curb':
         # Alloy wheel crop
         crop = base_img[400:850, 150:650].copy()
@@ -398,8 +421,8 @@ def get_preset_image(preset_id: str, view: str):
             M = cv2.getRotationMatrix2D((w / 2, h / 2), 4.0, 0.96)
             crop = cv2.warpAffine(crop, M, (w, h), borderMode=cv2.BORDER_REFLECT)
             crop = cv2.convertScaleAbs(crop, alpha=0.92, beta=8)
-        return Response(jpeg(crop), media_type='image/jpeg', headers={'Cache-Control': 'public, max-age=3600'})
-        
+        encoded_bytes = jpeg(crop)
+
     else:  # 'synthetic' or default fallback
         crop = base_img[300:850, 350:1500].copy()
         if view == 'current':
@@ -407,7 +430,14 @@ def get_preset_image(preset_id: str, view: str):
             matrix = cv2.getRotationMatrix2D((w / 2, h / 2), 3, .96)
             crop = cv2.warpAffine(crop, matrix, (w, h), borderMode=cv2.BORDER_REFLECT)
             crop = cv2.convertScaleAbs(crop, alpha=.92, beta=8)
-        return Response(jpeg(crop), media_type='image/jpeg', headers={'Cache-Control': 'public, max-age=3600'})
+        encoded_bytes = jpeg(crop)
+
+    _PRESET_CACHE[cache_key] = encoded_bytes
+    return Response(
+        encoded_bytes,
+        media_type='image/jpeg',
+        headers={'Cache-Control': 'public, max-age=86400, stale-while-revalidate=604800'},
+    )
 
 
 @app.get('/api/example/{view}')

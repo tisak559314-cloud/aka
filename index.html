@@ -10,6 +10,12 @@
       content="Compare vehicle photos, explore matching details and keep visual evidence. CarPrint brings a clearer perspective to every inspection."
     />
     <title>CarPrint — Every detail has a story</title>
+
+    <!-- Instant Preloading for Zero-Lag Asset Readiness -->
+    <link rel="preload" as="image" href="/videos/hero-poster.jpg" fetchpriority="high" />
+    <link rel="preload" as="video" href="/videos/hero-sequence.mp4" type="video/mp4" />
+    <link rel="prefetch" as="image" href="/images/car-studio.webp" type="image/webp" />
+    <link rel="prefetch" as="image" href="/images/car-studio.png" type="image/png" />
   </head>
   <body>
     <div id="root"></div>
